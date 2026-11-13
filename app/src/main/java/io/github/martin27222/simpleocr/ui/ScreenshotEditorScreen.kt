@@ -75,6 +75,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.AutoFixOff
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import io.github.martin27222.simpleocr.R
@@ -94,6 +95,9 @@ private val WorkbenchBackground = Color(0xFF0F172A)
 @Composable
 fun ScreenshotEditorScreen(
     state: EditorUiState,
+    /** The text that "Copy all" copies, already formatted the way the user set it. */
+    copyAllText: String,
+    onShowSettings: () -> Unit,
     onOpenPicker: () -> Unit,
     onToggleOverlays: () -> Unit,
     onRotateLeft: () -> Unit,
@@ -127,8 +131,10 @@ fun ScreenshotEditorScreen(
         previewScale.animateTo(1f, tween(durationMillis = 220, easing = FastOutSlowInEasing))
     }
 
-    LaunchedEffect(state.errorMessage, state.lastSavedUri) {
-        val message = state.errorMessage ?: state.lastSavedUri?.let { savedMessage }
+    LaunchedEffect(state.errorMessage, state.lastSavedUri, state.textCopied) {
+        val message = state.errorMessage
+            ?: state.lastSavedUri?.let { savedMessage }
+            ?: copiedMessage.takeIf { state.textCopied }
         if (message != null) {
             snackbarHostState.showSnackbar(message)
             onShowMessageConsumed()
@@ -217,8 +223,14 @@ fun ScreenshotEditorScreen(
                             contentDescription = "Toggle text boxes",
                         )
                     }
+                    IconButton(onClick = onShowSettings) {
+                        Icon(
+                            Icons.Outlined.Settings,
+                            contentDescription = stringResource(R.string.settings),
+                        )
+                    }
                     IconButton(onClick = { showPrivacySheet = true }) {
-                        Icon(Icons.Outlined.Info, contentDescription = "Privacy")
+                        Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.privacy))
                     }
                 },
             )
@@ -279,9 +291,9 @@ fun ScreenshotEditorScreen(
                 enabled = state.hasImage,
                 activeTool = activeTool,
                 cropState = cropState,
-                canCopyAll = state.fullText.isNotBlank(),
+                canCopyAll = copyAllText.isNotBlank(),
                 onCopyAll = {
-                    copyText(state.fullText)
+                    copyText(copyAllText)
                     onCopyAll()
                 },
                 onCrop = ::startCrop,
@@ -340,11 +352,11 @@ fun ScreenshotEditorScreen(
 
     if (showOcrSheet) {
         OcrBottomSheet(
-            fullText = state.fullText,
+            fullText = copyAllText,
             language = state.language,
             onLanguageSelected = onLanguageSelected,
             onCopyAll = {
-                copyText(state.fullText)
+                copyText(copyAllText)
                 onCopyAll()
             },
             onRerunOcr = onRerunOcr,

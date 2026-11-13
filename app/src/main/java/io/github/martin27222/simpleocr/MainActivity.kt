@@ -17,6 +17,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,7 +27,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import io.github.martin27222.simpleocr.camera.CameraScreen
+import io.github.martin27222.simpleocr.ocr.textToCopy
 import io.github.martin27222.simpleocr.privacy.PrivacyScreen
+import io.github.martin27222.simpleocr.settings.SettingsSheet
+import io.github.martin27222.simpleocr.ui.MergedTextScreen
 import io.github.martin27222.simpleocr.ui.ScreenshotEditorScreen
 import io.github.martin27222.simpleocr.ui.theme.SimpleOcrTheme
 
@@ -47,6 +51,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             SimpleOcrTheme {
                 val state by viewModel.uiState.collectAsState()
+                val settings by viewModel.settings.collectAsState()
                 val imagePicker = rememberLauncherForActivityResult(
                     ActivityResultContracts.GetContent(),
                 ) { uri: Uri? ->
@@ -57,16 +62,42 @@ class MainActivity : ComponentActivity() {
                 ) { granted ->
                     if (granted) viewModel.saveCopy()
                 }
+                // Only Android 9 and older need a permission to save photos.
+                val autoSavePermission = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission(),
+                ) { granted ->
+                    if (!granted) viewModel.updateSettings(settings.copy(autoSavePhotos = false))
+                }
                 var showPrivacy by remember { mutableStateOf(false) }
+                var showSettings by remember { mutableStateOf(false) }
+                val mergedLines = state.mergedLines
 
                 // An image opened from another app closes back into that app.
                 BackHandler(enabled = state.hasImage && !state.openedExternally) {
                     viewModel.closeImage()
                 }
+                // Back first discards the photos of a round object, then leaves the app.
+                BackHandler(enabled = !state.hasImage && state.multiPhotoCount > 0) {
+                    viewModel.resetMultiPhoto()
+                }
 
-                if (state.hasImage || state.isLoadingImage) {
+                if (mergedLines != null) {
+                    MergedTextScreen(
+                        text = remember(mergedLines, settings) {
+                            EditorViewModel.mergedText(mergedLines, settings)
+                        },
+                        textCopied = state.textCopied,
+                        onTextCopiedShown = viewModel::clearMessage,
+                        onShowSettings = { showSettings = true },
+                        onBack = viewModel::resetMultiPhoto,
+                    )
+                } else if (state.hasImage || state.isLoadingImage) {
                     ScreenshotEditorScreen(
                         state = state,
+                        copyAllText = remember(state.ocrResult, settings) {
+                            state.ocrResult?.textToCopy(settings).orEmpty()
+                        },
+                        onShowSettings = { showSettings = true },
                         onOpenPicker = { imagePicker.launch("image/*") },
                         onToggleOverlays = viewModel::toggleOverlays,
                         onRotateLeft = viewModel::rotateLeft,
@@ -90,19 +121,57 @@ class MainActivity : ComponentActivity() {
                     )
                 } else {
                     CameraScreen(
-                        onPhotoCaptured = viewModel::openCapturedPhoto,
-                        onOpenPicker = { imagePicker.launch("image/*") },
-                        onShowPrivacy = { showPrivacy = true },
-                        onError = { message ->
-                            Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+                        mode = state.captureMode,
+                        multiPhotoCount = state.multiPhotoCount,
+                        isMergingPhotos = state.isMergingPhotos,
+                        lightOnAtStart = settings.lightOnAtStart,
+                        onModeSelected = viewModel::setCaptureMode,
+                        onPhotoCaptured = { photo ->
+                            if (state.captureMode == CaptureMode.MultiPhoto) {
+                                viewModel.addMultiPhoto(photo)
+                            } else {
+                                viewModel.openCapturedPhoto(photo)
+                            }
                         },
+                        onMultiPhotoDone = viewModel::finishMultiPhoto,
+                        onMultiPhotoReset = viewModel::resetMultiPhoto,
+                        onOpenPicker = { imagePicker.launch("image/*") },
+                        onShowSettings = { showSettings = true },
+                        onShowPrivacy = { showPrivacy = true },
+                        onError = ::showToast,
                     )
+                    // The camera has no place for messages, so problems show up as a toast.
+                    LaunchedEffect(state.errorMessage) {
+                        state.errorMessage?.let { message ->
+                            showToast(message)
+                            viewModel.clearMessage()
+                        }
+                    }
                     if (showPrivacy) {
                         PrivacyScreen(onDismiss = { showPrivacy = false })
                     }
                 }
+
+                if (showSettings) {
+                    SettingsSheet(
+                        settings = settings,
+                        onChange = { changed ->
+                            viewModel.updateSettings(changed)
+                            if (changed.autoSavePhotos && !settings.autoSavePhotos &&
+                                needsLegacyWritePermission()
+                            ) {
+                                autoSavePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            }
+                        },
+                        onDismiss = { showSettings = false },
+                    )
+                }
             }
         }
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     override fun onNewIntent(intent: Intent) {

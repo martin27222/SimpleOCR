@@ -30,16 +30,22 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FlashlightOff
 import androidx.compose.material.icons.outlined.FlashlightOn
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -56,13 +62,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import io.github.martin27222.simpleocr.CaptureMode
 import io.github.martin27222.simpleocr.R
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -75,8 +84,16 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun CameraScreen(
+    mode: CaptureMode,
+    multiPhotoCount: Int,
+    isMergingPhotos: Boolean,
+    lightOnAtStart: Boolean,
+    onModeSelected: (CaptureMode) -> Unit,
     onPhotoCaptured: (Bitmap) -> Unit,
+    onMultiPhotoDone: () -> Unit,
+    onMultiPhotoReset: () -> Unit,
     onOpenPicker: () -> Unit,
+    onShowSettings: () -> Unit,
     onShowPrivacy: () -> Unit,
     onError: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -103,8 +120,16 @@ fun CameraScreen(
     ) {
         if (hasPermission) {
             CameraContent(
+                mode = mode,
+                multiPhotoCount = multiPhotoCount,
+                isMergingPhotos = isMergingPhotos,
+                lightOnAtStart = lightOnAtStart,
+                onModeSelected = onModeSelected,
                 onPhotoCaptured = onPhotoCaptured,
+                onMultiPhotoDone = onMultiPhotoDone,
+                onMultiPhotoReset = onMultiPhotoReset,
                 onOpenPicker = onOpenPicker,
+                onShowSettings = onShowSettings,
                 onShowPrivacy = onShowPrivacy,
                 onError = onError,
             )
@@ -120,8 +145,16 @@ fun CameraScreen(
 
 @Composable
 private fun CameraContent(
+    mode: CaptureMode,
+    multiPhotoCount: Int,
+    isMergingPhotos: Boolean,
+    lightOnAtStart: Boolean,
+    onModeSelected: (CaptureMode) -> Unit,
     onPhotoCaptured: (Bitmap) -> Unit,
+    onMultiPhotoDone: () -> Unit,
+    onMultiPhotoReset: () -> Unit,
     onOpenPicker: () -> Unit,
+    onShowSettings: () -> Unit,
     onShowPrivacy: () -> Unit,
     onError: (String) -> Unit,
 ) {
@@ -144,7 +177,7 @@ private fun CameraContent(
     }
     var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var camera by remember { mutableStateOf<Camera?>(null) }
-    var torchOn by rememberSaveable { mutableStateOf(false) }
+    var torchOn by rememberSaveable { mutableStateOf(lightOnAtStart) }
     var isCapturing by remember { mutableStateOf(false) }
 
     LaunchedEffect(lifecycleOwner) {
@@ -225,49 +258,156 @@ private fun CameraContent(
                 },
         )
 
-        IconButton(
-            onClick = onShowPrivacy,
+        Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
                 .padding(8.dp),
         ) {
-            Icon(
-                Icons.Outlined.Info,
-                contentDescription = stringResource(R.string.privacy),
-                tint = Color.White,
-            )
+            IconButton(onClick = onShowSettings) {
+                Icon(
+                    Icons.Outlined.Settings,
+                    contentDescription = stringResource(R.string.settings),
+                    tint = Color.White,
+                )
+            }
+            IconButton(onClick = onShowPrivacy) {
+                Icon(
+                    Icons.Outlined.Info,
+                    contentDescription = stringResource(R.string.privacy),
+                    tint = Color.White,
+                )
+            }
         }
 
-        Row(
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 32.dp, vertical = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(bottom = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            IconButton(onClick = onOpenPicker) {
-                Icon(
-                    Icons.Outlined.PhotoLibrary,
-                    contentDescription = stringResource(R.string.choose_image),
-                    tint = Color.White,
+            if (mode == CaptureMode.MultiPhoto) {
+                MultiPhotoStatus(
+                    count = multiPhotoCount,
+                    isMerging = isMergingPhotos,
+                    onDone = onMultiPhotoDone,
                 )
             }
 
-            ShutterButton(busy = isCapturing, onClick = ::capture)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (mode == CaptureMode.MultiPhoto) {
+                    val canReset = multiPhotoCount > 0
+                    IconButton(onClick = onMultiPhotoReset, enabled = canReset) {
+                        Icon(
+                            Icons.Outlined.RestartAlt,
+                            contentDescription = stringResource(R.string.multi_photo_reset),
+                            tint = if (canReset) Color.White else Color.Gray,
+                        )
+                    }
+                } else {
+                    IconButton(onClick = onOpenPicker) {
+                        Icon(
+                            Icons.Outlined.PhotoLibrary,
+                            contentDescription = stringResource(R.string.choose_image),
+                            tint = Color.White,
+                        )
+                    }
+                }
 
-            val hasTorch = camera?.cameraInfo?.hasFlashUnit() == true
-            IconButton(onClick = { torchOn = !torchOn }, enabled = hasTorch) {
-                Icon(
-                    if (torchOn) Icons.Outlined.FlashlightOn else Icons.Outlined.FlashlightOff,
-                    contentDescription = stringResource(R.string.toggle_light),
-                    tint = if (hasTorch) Color.White else Color.Gray,
-                )
+                ShutterButton(busy = isCapturing || isMergingPhotos, onClick = ::capture)
+
+                val hasTorch = camera?.cameraInfo?.hasFlashUnit() == true
+                IconButton(onClick = { torchOn = !torchOn }, enabled = hasTorch) {
+                    Icon(
+                        if (torchOn) Icons.Outlined.FlashlightOn else Icons.Outlined.FlashlightOff,
+                        contentDescription = stringResource(R.string.toggle_light),
+                        tint = if (hasTorch) Color.White else Color.Gray,
+                    )
+                }
+            }
+
+            ModeBar(mode = mode, onModeSelected = onModeSelected)
+        }
+    }
+}
+
+/** Explains the mode for several photos and offers "Done" once there is a photo. */
+@Composable
+private fun MultiPhotoStatus(
+    count: Int,
+    isMerging: Boolean,
+    onDone: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.multi_photo_hint),
+            color = Color.White,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.Black.copy(alpha = 0.55f))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        )
+        if (count > 0) {
+            Button(onClick = onDone, enabled = !isMerging) {
+                Text(pluralStringResource(R.plurals.multi_photo_done, count, count))
             }
         }
     }
+}
+
+/** The two things the shutter can do. */
+@Composable
+private fun ModeBar(
+    mode: CaptureMode,
+    onModeSelected: (CaptureMode) -> Unit,
+) {
+    Row(
+        modifier = Modifier.selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ModeTab(
+            label = stringResource(R.string.mode_photo),
+            selected = mode == CaptureMode.Photo,
+            onClick = { onModeSelected(CaptureMode.Photo) },
+        )
+        ModeTab(
+            label = stringResource(R.string.mode_multi_photo),
+            selected = mode == CaptureMode.MultiPhoto,
+            onClick = { onModeSelected(CaptureMode.MultiPhoto) },
+        )
+    }
+}
+
+@Composable
+private fun ModeTab(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Text(
+        text = label,
+        color = if (selected) Color.Black else Color.White,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(if (selected) Color.White else Color.Black.copy(alpha = 0.55f))
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    )
 }
 
 @Composable

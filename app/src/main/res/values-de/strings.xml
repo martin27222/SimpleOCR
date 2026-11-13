@@ -16,4 +16,28 @@
     <string name="flattening_page">Seite wird entzerrt</string>
     <string name="show_original">Originalfoto zeigen</string>
     <string name="show_flattened">Entzerrtes Foto zeigen</string>
+    <string name="settings">Einstellungen</string>
+    <string name="mode_photo">Foto</string>
+    <string name="mode_multi_photo">Mehrere Fotos</string>
+    <string name="multi_photo_hint">Objekt nach jedem Foto etwas weiterdrehen. Etwa ein Drittel des Textes soll auf beiden Fotos sein.</string>
+    <plurals name="multi_photo_done">
+        <item quantity="one">Fertig (%d Foto)</item>
+        <item quantity="other">Fertig (%d Fotos)</item>
+    </plurals>
+    <string name="multi_photo_reset">Fotos verwerfen und neu beginnen</string>
+    <string name="merged_text_title">Text aus allen Fotos</string>
+    <string name="no_text_found">Kein Text erkannt</string>
+    <string name="setting_auto_dewarp">Gebogene Seiten entzerren</string>
+    <string name="setting_auto_dewarp_description">Fotos gebogener Seiten werden vor dem Lesen geglättet, wenn das besser lesbar ist.</string>
+    <string name="setting_join_hyphenated">Getrennte Wörter zusammenfügen</string>
+    <string name="setting_join_hyphenated_description">Ein am Zeilenende mit Bindestrich getrenntes Wort wird wieder ein Wort.</string>
+    <string name="setting_flowing_text">Fließtext</string>
+    <string name="setting_flowing_text_description">Die Zeilen eines Absatzes werden verbunden. Aus: Zeilenumbrüche wie im Foto.</string>
+    <string name="setting_auto_copy">Text automatisch kopieren</string>
+    <string name="setting_auto_copy_description">Der Text liegt in der Zwischenablage, sobald ein Foto gelesen ist.</string>
+    <string name="setting_auto_save">Jedes Foto speichern</string>
+    <string name="setting_auto_save_description">Jedes hier aufgenommene Foto wird auch in der Galerie abgelegt.</string>
+    <string name="setting_light_on">Licht beim Start an</string>
+    <string name="setting_light_on_description">Das Licht wird eingeschaltet, sobald die Kamera startet.</string>
+    <string name="privacy_text">Text wird auf diesem Gerät gelesen. Fotos werden nie hochgeladen.\n\nSimpleOCR kann das Internet gar nicht nutzen: Die App fragt diese Berechtigung nicht an. Es gibt keine Werbung, keine Statistik und kein Tracking.\n\nFotos liegen nur im Arbeitsspeicher, solange sie angezeigt werden. Ein Foto wird nur dann in der Galerie gespeichert, wenn der Speichern-Knopf gedrückt wird oder „Jedes Foto speichern“ eingeschaltet ist.</string>
 </resources>

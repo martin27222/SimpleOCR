@@ -8,6 +8,15 @@ import android.net.Uri
 import io.github.martin27222.simpleocr.ocr.OcrLanguage
 import io.github.martin27222.simpleocr.ocr.OcrResult
 
+/** What the shutter button does. */
+enum class CaptureMode {
+    /** One photo, flattened if that helps. */
+    Photo,
+
+    /** Several overlapping photos of one object, joined into one text. */
+    MultiPhoto,
+}
+
 data class EditorUiState(
     val sourceUri: Uri? = null,
     val bitmap: Bitmap? = null,
@@ -22,6 +31,14 @@ data class EditorUiState(
     /** Both the original photo and a flattened version exist and can be swapped. */
     val canToggleDewarp: Boolean = false,
     val showingDewarped: Boolean = false,
+    val captureMode: CaptureMode = CaptureMode.Photo,
+    /** Photos taken so far in the mode for several photos. */
+    val multiPhotoCount: Int = 0,
+    val isMergingPhotos: Boolean = false,
+    /** The joined lines of several photos; non-null while their text is shown. */
+    val mergedLines: List<String>? = null,
+    /** Text was put on the clipboard automatically and the user has not been told yet. */
+    val textCopied: Boolean = false,
     val lastSavedUri: Uri? = null,
     val errorMessage: String? = null,
 ) {

@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import io.github.martin27222.simpleocr.R
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,11 +27,9 @@ fun PrivacyScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 18.dp),
         ) {
-            Text("Privacy")
+            Text(stringResource(R.string.privacy), style = MaterialTheme.typography.titleLarge)
             Text(
-                text = "OCR runs locally on your device. Images are not uploaded.\n\n" +
-                    "SimpleOCR does not request internet access, does not use analytics, " +
-                    "does not include ads, and does not send screenshots to a server.",
+                text = stringResource(R.string.privacy_text),
                 modifier = Modifier.padding(top = 12.dp, bottom = 28.dp),
             )
         }

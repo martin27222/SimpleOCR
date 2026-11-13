@@ -20,10 +20,10 @@ class SaveImageUseCase(
 ) {
     suspend fun saveCopy(bitmap: Bitmap): Uri = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
-        val name = "SimpleOCR-${timestamp()}.png"
+        val name = "SimpleOCR-${timestamp()}.jpg"
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, name)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/SimpleOCR")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
@@ -34,7 +34,7 @@ class SaveImageUseCase(
             ?: error("Could not create MediaStore image")
         runCatching {
             resolver.openOutputStream(uri)?.use {
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it)
             } ?: error("Could not open MediaStore output")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 resolver.update(
@@ -51,5 +51,10 @@ class SaveImageUseCase(
     }
 
     private fun timestamp(): String =
-        LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+        LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS"))
+
+    private companion object {
+        /** Photos are saved as JPEG: a lossless PNG of a camera photo is several times larger. */
+        const val JPEG_QUALITY = 95
+    }
 }

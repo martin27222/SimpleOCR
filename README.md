@@ -13,7 +13,8 @@ Early development. Builds exist for 64-bit ARM phones only.
 | Open an image from another app and copy its text | works (from EasyOCR) |
 | Take the photo inside the app | works, needs testing on real devices |
 | Straighten curved pages (book pages) before recognition | works on test images, needs testing on real photos |
-| Combine several photos of a round object (bottle labels) into one text | planned |
+| Combine several photos of a round object (bottle labels) into one text | works on test texts, needs testing on real photos |
+| Settings | works, needs testing on real devices |
 
 Target languages are German and English. The target device is a Pixel 9, the app runs on Android 8 and newer.
 
@@ -38,6 +39,27 @@ ML Kit is not open source. The SimpleOCR code is Apache 2.0, the ML Kit library 
 A photo of an open book has bent text lines. SimpleOCR first reads the photo as taken, so text shows up at once. It then flattens the photo with the [UVDoc](https://github.com/tanguymagne/UVDoc) network (MIT License), reads it again and switches to the flattened version only if that reads clearly better. A button swaps between both versions.
 
 The network runs on the device through [ONNX Runtime](https://github.com/microsoft/onnxruntime) (MIT License). The model file was converted from the original UVDoc checkpoint for this project; [third_party/uvdoc](third_party/uvdoc/README.md) documents where it comes from and how to rebuild it.
+
+## Several photos of a round object
+
+The label of a bottle does not fit into one photo. In the mode "Several photos" the object is turned a little after each photo, so that about a third of the text is in two photos. SimpleOCR reads every photo and joins the texts: it looks for the longest piece of text that ends a line in one photo and starts the matching line in the next, and keeps that piece once. Where both photos read the shared piece differently, the reading the recognizer was surer about wins.
+
+Example: `Aqua, Alcohol Denat., Parf` and `Denat., Parfum, Limonene` become `Aqua, Alcohol Denat., Parfum, Limonene`.
+
+The images themselves are not stitched together, and no further model is involved.
+
+## Settings
+
+The app works without touching any setting.
+
+| Setting | Default |
+| --- | --- |
+| Flatten curved pages | on |
+| Rejoin words split with a hyphen at a line end | on |
+| Flowing text instead of the line breaks of the photo | on |
+| Copy text automatically after a photo | off |
+| Save every photo to the gallery | off |
+| Light on at start | off |
 
 ## Install a development build
 
