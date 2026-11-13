@@ -11,30 +11,38 @@ val localProperties = Properties().apply {
         file.inputStream().use(::load)
     }
 }
-val hasLocalReleaseSigning = !localProperties.getProperty("easyocr.release.storeFile").isNullOrBlank()
+val hasLocalReleaseSigning = !localProperties.getProperty("simpleocr.release.storeFile").isNullOrBlank()
 
 android {
-    namespace = "com.easyocr.editor"
+    namespace = "io.github.martin27222.simpleocr"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.easyocr.editor"
+        applicationId = "io.github.martin27222.simpleocr"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.1.2"
+        versionCode = 1
+        versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
+        // Public, committed key: every development build carries the same
+        // signature, so a newer debug APK installs over an older one.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("localRelease") {
-            val storePath = localProperties.getProperty("easyocr.release.storeFile")
+            val storePath = localProperties.getProperty("simpleocr.release.storeFile")
             if (!storePath.isNullOrBlank()) {
                 storeFile = rootProject.file(storePath)
-                storePassword = localProperties.getProperty("easyocr.release.storePassword")
-                keyAlias = localProperties.getProperty("easyocr.release.keyAlias")
-                keyPassword = localProperties.getProperty("easyocr.release.keyPassword")
+                storePassword = localProperties.getProperty("simpleocr.release.storePassword")
+                keyAlias = localProperties.getProperty("simpleocr.release.keyAlias")
+                keyPassword = localProperties.getProperty("simpleocr.release.keyPassword")
             }
         }
     }

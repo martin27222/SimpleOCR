@@ -1,0 +1,16 @@
+SimpleOCR
+Copyright 2026 SimpleOCR contributors
+
+This product is a fork of EasyOCR
+(https://github.com/MosesEllermann/EasyOCR), version 1.1.2.
+Copyright 2026 EasyOCR contributors
+Licensed under the Apache License, Version 2.0.
+
+Changes made for SimpleOCR are recorded in the git history of this
+repository and summarised in CHANGELOG.md. Source files taken from EasyOCR
+carry a header naming their origin.
+
+Third-party components used at runtime are distributed under their own
+terms. In particular, Google ML Kit Text Recognition is not open source
+and is governed by the ML Kit Terms of Service
+(https://developers.google.com/ml-kit/terms).

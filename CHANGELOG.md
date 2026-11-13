@@ -1,13 +1,11 @@
 # Changelog
 
-## 1.1.2
+## 0.1.0 (unreleased)
 
-- Updated the app icon.
+- Forked from EasyOCR 1.1.2.
+- Renamed the app to SimpleOCR with the application ID `io.github.martin27222.simpleocr`.
+- Added an automated build that produces a debug APK.
 
-## 1.0.0
+## EasyOCR history
 
-- Initial public release.
-- Android image editor intent support for screenshots and gallery/file images.
-- Offline on-device OCR with selectable text overlays.
-- Crop, document perspective crop, rotate, draw, save copy, and share tools.
-- Privacy-first defaults with no internet permission, analytics, tracking, or ads.
+Changes before the fork are listed in the [EasyOCR changelog](https://github.com/MosesEllermann/EasyOCR/blob/main/CHANGELOG.md).

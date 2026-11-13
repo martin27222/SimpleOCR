@@ -1,126 +1,64 @@
-# EasyOCR
+# SimpleOCR
 
-EasyOCR is an open-source, privacy-first Android image editor for copying text from screenshots. It is designed to appear in Android's screenshot/image editor flow: take a screenshot, tap the preview, choose EasyOCR, and select text directly on the image.
+SimpleOCR is an offline Android app with one job: point the camera at text, copy the text.
 
-<p align="center">
-  <a href="https://github.com/MosesEllermann/EasyOCR/releases/latest">
-    <img src="https://img.shields.io/badge/Download%20APK-Latest%20GitHub%20Release-238636?style=for-the-badge&logo=github&logoColor=white" alt="Download APK from the latest GitHub release">
-  </a>
-</p>
+It is a fork of [EasyOCR](https://github.com/MosesEllermann/EasyOCR) by Moses Ellermann, a privacy-first screenshot OCR editor. SimpleOCR keeps its on-device text recognition and text selection, and adds what is needed for photographing real objects.
 
-## Why EasyOCR Exists
+## Status
 
-I came from a phone setup where copying text from screenshots with Gemini/Google tools was built in and effortless. After moving to GrapheneOS, I missed that simple workflow, but I did not want to go back to Google services, cloud processing, or account-tied features just to copy text from an image.
+Early development. The current code is the EasyOCR 1.1.2 base renamed to SimpleOCR.
 
-EasyOCR is my open-source alternative: a small Android editor that opens screenshots, runs OCR locally, and lets you copy text without uploading the image anywhere.
+| Feature | State |
+| --- | --- |
+| Open an image from another app and copy its text | works (from EasyOCR) |
+| Take the photo inside the app | planned |
+| Straighten curved pages (book pages) before recognition | planned, after measuring the benefit |
+| Combine several photos of a round object (bottle labels) into one text | planned |
 
-## What It Does
-
-- Opens screenshots from Android's **Edit with...** flow.
-- Runs OCR locally on your device.
-- Lets you select and copy detected text on top of the image.
-- Supports pinch-to-zoom and pan.
-- Includes crop, document perspective crop, rotate, drawing, save copy, and share tools.
-- Works offline after installation.
-- Built for privacy-conscious Android setups, including GrapheneOS.
-
-## Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/copytext.png" width="260" alt="Copy detected text in EasyOCR">
-  <img src="docs/screenshots/crop.png" width="260" alt="Crop a screenshot in EasyOCR">
-  <img src="docs/screenshots/writeon.png" width="260" alt="Draw on an image in EasyOCR">
-</p>
+Target languages are German and English. The target device is a Pixel 9, the app runs on Android 8 and newer.
 
 ## Privacy
 
-OCR runs locally on your device. Images are not uploaded.
+Text recognition runs on the device. Images are not uploaded.
 
-EasyOCR:
+SimpleOCR:
 
 - does not request `INTERNET`
-- explicitly removes transitive `INTERNET` and `ACCESS_NETWORK_STATE` permissions from the final merged APK manifest
-- does not include analytics
-- does not include crash reporting
-- does not include ads
-- does not overwrite the original screenshot
+- explicitly removes the transitive `INTERNET` and `ACCESS_NETWORK_STATE` permissions from the merged manifest
+- has no analytics, crash reporting or ads
 
-The manifest only requests legacy `WRITE_EXTERNAL_STORAGE` for Android 8-9 save-copy support. Android 10 and newer use scoped storage through MediaStore.
+## Text recognition
 
-You can verify the released APK permissions with:
+SimpleOCR uses [ML Kit Text Recognition v2](https://developers.google.com/ml-kit/vision/text-recognition/v2/android) with the bundled Latin recognizer. The model ships inside the APK, so no Google account, model download or network access is needed.
 
-```bash
-aapt dump permissions EasyOCR-1.1.1.apk
-```
+ML Kit is not open source. The SimpleOCR code is Apache 2.0, the ML Kit library is governed by the [ML Kit Terms of Service](https://developers.google.com/ml-kit/terms).
 
-The output should not contain `android.permission.INTERNET` or `android.permission.ACCESS_NETWORK_STATE`.
+## Install a development build
 
-## OCR
+Every push to `main` publishes a debug APK as the [latest development build](https://github.com/martin27222/SimpleOCR/releases/tag/dev-latest). Pull requests attach their APK as a workflow artifact.
 
-EasyOCR uses ML Kit Text Recognition v2 with the bundled Latin recognizer:
-
-```kotlin
-implementation("com.google.mlkit:text-recognition:16.0.1")
-```
-
-The recognizer runs on-device and is bundled with the app, so it does not need a Google account, cloud processing, runtime model download, or the `INTERNET` permission.
-
-Notes:
-
-- English and German are the default target languages.
-- The bundled recognizer increases APK size compared with Play Services delivery.
-- Tesseract and PaddleOCR are possible alternatives, but ML Kit is currently the most practical fit for this lightweight screenshot-editor workflow.
-
-## Android Integration
-
-EasyOCR registers as an image editor/viewer for:
-
-- `android.intent.action.EDIT`
-- `android.intent.action.VIEW`
-- `android.intent.action.SEND`
-- `image/*`, `image/png`, `image/jpeg`, and `image/webp`
-
-Incoming `content://` images are opened through Android's `ContentResolver`. Persistable read permission is taken when the provider grants it.
+Development builds are signed with the debug key in `app/debug.keystore`. That key is public, so only install development builds from this repository.
 
 ## Build
 
 Requirements:
 
-- Android Studio with Android SDK Platform 36 installed
 - JDK 17
-- Gradle 9.4.1 or newer when building outside Android Studio
-
-Build a debug APK:
+- Android SDK Platform 36
 
 ```bash
-./gradlew assembleDebug
+./gradlew test assembleDebug
 ```
 
-Run tests and build a release APK:
-
-```bash
-./gradlew test assembleRelease
-```
-
-For a local signed release build, configure a private keystore through `local.properties`:
+For a signed release build, configure a private keystore through `local.properties`:
 
 ```properties
-easyocr.release.storeFile=easyocr-release.jks
-easyocr.release.storePassword=...
-easyocr.release.keyAlias=easyocr
-easyocr.release.keyPassword=...
+simpleocr.release.storeFile=simpleocr-release.jks
+simpleocr.release.storePassword=...
+simpleocr.release.keyAlias=simpleocr
+simpleocr.release.keyPassword=...
 ```
-
-## Notes
-
-Android's screenshot preview/editor chooser differs a little by OS build and OEM. The important pieces for GrapheneOS are the `ACTION_EDIT` image intent filter, `image/*` MIME support, and content URI read handling, all of which are included here.
-
-## Contributing
-
-Contributions are very welcome. Ideas, bug reports, GrapheneOS/device testing notes, translations, UX improvements, OCR improvements, and pull requests all help make EasyOCR better.
-
-If you want to work on something larger, opening an issue first is helpful so the direction can be discussed before you spend time on it.
 
 ## License
 
-EasyOCR is open source under the Apache License 2.0. See [LICENSE](LICENSE).
+SimpleOCR is open source under the Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

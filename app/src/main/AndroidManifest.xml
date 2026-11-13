@@ -20,7 +20,7 @@
         android:label="@string/app_name"
         android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.EasyOCR">
+        android:theme="@style/Theme.SimpleOCR">
 
         <activity
             android:name=".MainActivity"

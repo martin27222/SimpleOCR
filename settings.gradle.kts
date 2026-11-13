@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "EasyOCR"
+rootProject.name = "SimpleOCR"
 include(":app")
