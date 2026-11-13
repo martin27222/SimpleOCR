@@ -9,3 +9,4 @@ app/build/
 release/
 *.jks
 *.keystore
+!app/debug.keystore
