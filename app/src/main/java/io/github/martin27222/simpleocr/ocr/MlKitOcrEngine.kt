@@ -1,0 +1,54 @@
+// Derived from EasyOCR (https://github.com/MosesEllermann/EasyOCR), Apache License 2.0.
+// Modified for SimpleOCR; see NOTICE and the git history for the changes.
+
+package io.github.martin27222.simpleocr.ocr
+
+import android.graphics.Bitmap
+import io.github.martin27222.simpleocr.geometry.RectF2
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+
+class MlKitOcrEngine : OcrEngine {
+    private val recognizer by lazy {
+        TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    }
+
+    override suspend fun recognize(
+        bitmap: Bitmap,
+        language: OcrLanguage,
+    ): OcrResult = withContext(Dispatchers.Default) {
+        val image = InputImage.fromBitmap(bitmap, 0)
+        val text = recognizer.process(image).await()
+        val blocks = text.textBlocks.mapNotNull { block ->
+            val box = block.boundingBox ?: return@mapNotNull null
+            RecognizedTextBlock(
+                text = block.text.trim(),
+                boundingBox = RectF2(
+                    left = box.left.toFloat(),
+                    top = box.top.toFloat(),
+                    right = box.right.toFloat(),
+                    bottom = box.bottom.toFloat(),
+                ),
+                lines = block.lines.mapNotNull { line ->
+                    val lineBox = line.boundingBox ?: return@mapNotNull null
+                    RecognizedTextLine(
+                        text = line.text.trim(),
+                        boundingBox = RectF2(
+                            left = lineBox.left.toFloat(),
+                            top = lineBox.top.toFloat(),
+                            right = lineBox.right.toFloat(),
+                            bottom = lineBox.bottom.toFloat(),
+                        ),
+                        confidence = line.confidence,
+                    )
+                }.filter { it.text.isNotBlank() },
+            )
+        }.filter { it.text.isNotBlank() }
+
+        OcrResultMapper.fromBlocks(blocks)
+    }
+}
