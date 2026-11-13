@@ -17,6 +17,11 @@ data class EditorUiState(
     val openedExternally: Boolean = false,
     val isLoadingImage: Boolean = false,
     val isRunningOcr: Boolean = false,
+    /** The flattened version of the photo is still being computed. */
+    val isDewarping: Boolean = false,
+    /** Both the original photo and a flattened version exist and can be swapped. */
+    val canToggleDewarp: Boolean = false,
+    val showingDewarped: Boolean = false,
     val lastSavedUri: Uri? = null,
     val errorMessage: String? = null,
 ) {

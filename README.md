@@ -6,13 +6,13 @@ It is a fork of [EasyOCR](https://github.com/MosesEllermann/EasyOCR) by Moses El
 
 ## Status
 
-Early development. The current code is the EasyOCR 1.1.2 base renamed to SimpleOCR.
+Early development. Builds exist for 64-bit ARM phones only.
 
 | Feature | State |
 | --- | --- |
 | Open an image from another app and copy its text | works (from EasyOCR) |
-| Take the photo inside the app | planned |
-| Straighten curved pages (book pages) before recognition | planned, after measuring the benefit |
+| Take the photo inside the app | works, needs testing on real devices |
+| Straighten curved pages (book pages) before recognition | works on test images, needs testing on real photos |
 | Combine several photos of a round object (bottle labels) into one text | planned |
 
 Target languages are German and English. The target device is a Pixel 9, the app runs on Android 8 and newer.
@@ -32,6 +32,12 @@ SimpleOCR:
 SimpleOCR uses [ML Kit Text Recognition v2](https://developers.google.com/ml-kit/vision/text-recognition/v2/android) with the bundled Latin recognizer. The model ships inside the APK, so no Google account, model download or network access is needed.
 
 ML Kit is not open source. The SimpleOCR code is Apache 2.0, the ML Kit library is governed by the [ML Kit Terms of Service](https://developers.google.com/ml-kit/terms).
+
+## Flattening curved pages
+
+A photo of an open book has bent text lines. SimpleOCR first reads the photo as taken, so text shows up at once. It then flattens the photo with the [UVDoc](https://github.com/tanguymagne/UVDoc) network (MIT License), reads it again and switches to the flattened version only if that reads clearly better. A button swaps between both versions.
+
+The network runs on the device through [ONNX Runtime](https://github.com/microsoft/onnxruntime) (MIT License). The model file was converted from the original UVDoc checkpoint for this project; [third_party/uvdoc](third_party/uvdoc/README.md) documents where it comes from and how to rebuild it.
 
 ## Install a development build
 

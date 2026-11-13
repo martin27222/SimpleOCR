@@ -28,7 +28,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
 
       - name: Test and build the debug APK
-        run: ./gradlew --no-daemon test assembleDebug
+        run: ./gradlew --no-daemon test assembleDebug assembleRelease
 
       - name: Name the APK
         run: |

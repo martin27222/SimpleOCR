@@ -43,6 +43,7 @@ class MlKitOcrEngine : OcrEngine {
                             right = lineBox.right.toFloat(),
                             bottom = lineBox.bottom.toFloat(),
                         ),
+                        confidence = line.confidence,
                     )
                 }.filter { it.text.isNotBlank() },
             )

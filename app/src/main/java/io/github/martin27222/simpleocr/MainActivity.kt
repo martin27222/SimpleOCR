@@ -82,6 +82,7 @@ class MainActivity : ComponentActivity() {
                         onBack = {
                             if (state.openedExternally) finish() else viewModel.closeImage()
                         },
+                        onToggleDewarp = viewModel::toggleDewarp,
                         onShowMessageConsumed = viewModel::clearMessage,
                         onCopyAll = {},
                         onRerunOcr = viewModel::rerunOcr,

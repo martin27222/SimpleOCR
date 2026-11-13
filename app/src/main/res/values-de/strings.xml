@@ -12,4 +12,8 @@
     <string name="save_photo">Foto in Galerie speichern</string>
     <string name="saved_to_gallery">Foto in Galerie gespeichert</string>
     <string name="back_to_camera">Zurück zur Kamera</string>
+    <string name="reading_text">Text wird gelesen</string>
+    <string name="flattening_page">Seite wird entzerrt</string>
+    <string name="show_original">Originalfoto zeigen</string>
+    <string name="show_flattened">Entzerrtes Foto zeigen</string>
 </resources>

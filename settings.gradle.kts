@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "SimpleOCR"
 include(":app")
+include(":core")

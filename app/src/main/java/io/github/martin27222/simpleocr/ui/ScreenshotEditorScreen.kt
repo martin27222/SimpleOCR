@@ -72,6 +72,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.AutoFixHigh
+import androidx.compose.material.icons.outlined.AutoFixOff
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
@@ -99,6 +101,7 @@ fun ScreenshotEditorScreen(
     onCrop: (CropState) -> Unit,
     onSaveCopy: () -> Unit,
     onBack: () -> Unit,
+    onToggleDewarp: () -> Unit,
     onShowMessageConsumed: () -> Unit,
     onCopyAll: () -> Unit,
     onRerunOcr: () -> Unit,
@@ -194,6 +197,20 @@ fun ScreenshotEditorScreen(
                     titleContentColor = Color.White,
                 ),
                 actions = {
+                    if (state.canToggleDewarp) {
+                        IconButton(onClick = onToggleDewarp) {
+                            Icon(
+                                imageVector = if (state.showingDewarped) {
+                                    Icons.Outlined.AutoFixHigh
+                                } else {
+                                    Icons.Outlined.AutoFixOff
+                                },
+                                contentDescription = stringResource(
+                                    if (state.showingDewarped) R.string.show_original else R.string.show_flattened,
+                                ),
+                            )
+                        }
+                    }
                     IconButton(onClick = onToggleOverlays, enabled = state.hasImage) {
                         Icon(
                             imageVector = if (state.overlaysEnabled) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
@@ -295,7 +312,7 @@ fun ScreenshotEditorScreen(
             )
 
             AnimatedVisibility(
-                visible = state.isRunningOcr,
+                visible = state.isRunningOcr || state.isDewarping,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(16.dp),
@@ -310,7 +327,11 @@ fun ScreenshotEditorScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         CircularProgressIndicator(strokeWidth = 2.dp)
-                        Text("Running OCR")
+                        Text(
+                            stringResource(
+                                if (state.isRunningOcr) R.string.reading_text else R.string.flattening_page,
+                            ),
+                        )
                     }
                 }
             }

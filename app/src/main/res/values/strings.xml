@@ -13,4 +13,8 @@
     <string name="save_photo">Save photo to gallery</string>
     <string name="saved_to_gallery">Photo saved to gallery</string>
     <string name="back_to_camera">Back to camera</string>
+    <string name="reading_text">Reading text</string>
+    <string name="flattening_page">Flattening page</string>
+    <string name="show_original">Show original photo</string>
+    <string name="show_flattened">Show flattened photo</string>
 </resources>

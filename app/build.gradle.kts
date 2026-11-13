@@ -25,6 +25,12 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Only 64-bit ARM, the architecture of current phones. Each further architecture would
+        // add its own copy of the ML Kit and ONNX Runtime libraries (about 45 MB each).
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
     }
 
     signingConfigs {
@@ -78,6 +84,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":core"))
+
     implementation(platform("androidx.compose:compose-bom:2026.06.00"))
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.06.00"))
 
@@ -97,6 +105,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.31.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
 

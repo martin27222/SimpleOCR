@@ -19,6 +19,7 @@ object OcrResultMapper {
                         id = "block-$index-line-$lineIndex",
                         text = line.text,
                         boundingBox = line.boundingBox,
+                        confidence = line.confidence,
                     )
                 },
             )
@@ -40,4 +41,5 @@ data class RecognizedTextBlock(
 data class RecognizedTextLine(
     val text: String,
     val boundingBox: RectF2,
+    val confidence: Float = 1f,
 )
