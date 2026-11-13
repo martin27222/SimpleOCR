@@ -12,6 +12,10 @@
 - Added settings: flattening, rejoining hyphenated words, flowing text, automatic copy, automatic photo saving, light at start.
 - "Copy all" gives flowing text with rejoined words by default.
 - Photos are saved as JPEG instead of PNG.
+- Pages are also flattened with the help of the recognized text itself, which undoes the squeeze of pages photographed at an angle.
+- The readings of a photo and its flattened versions correct each other word by word.
+- The camera has a speed mode and a quality mode.
+- Joining several photos handles lines that lie inside another line, letters cut off at photo edges and flat pages photographed in parts.
 
 ## EasyOCR history
 

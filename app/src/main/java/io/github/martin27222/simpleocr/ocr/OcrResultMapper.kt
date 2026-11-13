@@ -3,6 +3,8 @@
 
 package io.github.martin27222.simpleocr.ocr
 
+import io.github.martin27222.simpleocr.core.merge.ReadWord
+import io.github.martin27222.simpleocr.core.rectify.Glyph
 import io.github.martin27222.simpleocr.geometry.RectF2
 
 object OcrResultMapper {
@@ -20,6 +22,8 @@ object OcrResultMapper {
                         text = line.text,
                         boundingBox = line.boundingBox,
                         confidence = line.confidence,
+                        words = line.words,
+                        glyphs = line.glyphs,
                     )
                 },
             )
@@ -42,4 +46,6 @@ data class RecognizedTextLine(
     val text: String,
     val boundingBox: RectF2,
     val confidence: Float = 1f,
+    val words: List<ReadWord> = emptyList(),
+    val glyphs: List<Glyph> = emptyList(),
 )

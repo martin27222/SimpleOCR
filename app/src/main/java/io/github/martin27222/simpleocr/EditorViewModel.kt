@@ -16,6 +16,7 @@ import io.github.martin27222.simpleocr.core.merge.ReadLine
 import io.github.martin27222.simpleocr.core.merge.TextMerge
 import io.github.martin27222.simpleocr.core.text.TextFormatter
 import io.github.martin27222.simpleocr.dewarp.Dewarper
+import io.github.martin27222.simpleocr.dewarp.TextGuidedFlattener
 import io.github.martin27222.simpleocr.dewarp.UvDocDewarper
 import io.github.martin27222.simpleocr.image.BitmapEditor
 import io.github.martin27222.simpleocr.image.ImageLoader
@@ -28,6 +29,7 @@ import io.github.martin27222.simpleocr.ocr.OcrRepository
 import io.github.martin27222.simpleocr.ocr.OcrResult
 import io.github.martin27222.simpleocr.ocr.readLines
 import io.github.martin27222.simpleocr.ocr.textToCopy
+import io.github.martin27222.simpleocr.ocr.votedWith
 import io.github.martin27222.simpleocr.settings.AppSettings
 import io.github.martin27222.simpleocr.settings.SettingsStore
 import io.github.martin27222.simpleocr.ui.CropPreset
@@ -118,12 +120,34 @@ class EditorViewModel(
         _uiState.update { it.copy(multiPhotoCount = session.readings.size) }
         autoSave(bitmap)
         val language = _uiState.value.language
+        val flatten = _settings.value.autoDewarp
         session.jobs += viewModelScope.launch {
-            catching { ocrEngine.recognize(bitmap, language) }
-                .onSuccess { session.readings[index] = it.readLines() }
+            catching { readForMerging(bitmap, language, flatten) }
+                .onSuccess { session.readings[index] = it }
                 .onFailure { throwable ->
                     _uiState.update { it.copy(errorMessage = throwable.message ?: "OCR failed") }
                 }
+        }
+    }
+
+    /**
+     * Reads one photo of a series: as taken and, if that reads better, flattened with the help of
+     * the first reading. Both readings correct each other word by word.
+     */
+    private suspend fun readForMerging(bitmap: Bitmap, language: OcrLanguage, flatten: Boolean): List<ReadLine> {
+        val asTaken = ocrEngine.recognize(bitmap, language)
+        val flat = if (flatten) {
+            catching {
+                TextGuidedFlattener.flatten(bitmap, asTaken)?.let { Variant(it, ocrEngine.recognize(it, language)) }
+            }.getOrNull()
+        } else {
+            null
+        }
+        val useFlat = flat != null && DewarpChoice.preferDewarped(asTaken.qualityScore, flat.ocr.qualityScore)
+        return if (useFlat) {
+            flat.ocr.votedWith(listOf(asTaken)).readLines(flat.bitmap.height)
+        } else {
+            asTaken.votedWith(listOfNotNull(flat?.ocr)).readLines(bitmap.height)
         }
     }
 
@@ -293,7 +317,9 @@ class EditorViewModel(
     /**
      * Reads a photo in two steps so text shows up as fast as possible:
      *  1. recognize the photo as taken and show that at once;
-     *  2. flatten the photo, recognize it again and switch to it if it reads clearly better.
+     *  2. flatten the photo in two ways, recognize both and switch to the best one if it reads
+     *     clearly better than the photo as taken;
+     *  3. correct single words by comparing all readings.
      */
     private fun readPhoto(bitmap: Bitmap) {
         val language = _uiState.value.language
@@ -313,27 +339,37 @@ class EditorViewModel(
                 it.copy(ocrResult = originalOcr, isRunningOcr = false, isDewarping = autoDewarp)
             }
 
-            // A failed flattening is not an error for the user: the original reading stays.
-            val dewarped = if (autoDewarp) {
+            // Two ways of flattening compete: one guided by the text just read, one by the UVDoc
+            // network. A failed flattening is not an error for the user: the other readings stay.
+            val flattened = ArrayList<Variant>()
+            if (autoDewarp) {
+                catching {
+                    TextGuidedFlattener.flatten(bitmap, originalOcr)
+                        ?.let { Variant(it, ocrEngine.recognize(it, language)) }
+                }.getOrNull()?.let(flattened::add)
                 catching {
                     val flat = dewarper.dewarp(bitmap)
                     Variant(flat, ocrEngine.recognize(flat, language))
-                }.getOrNull()
-            } else {
-                null
+                }.getOrNull()?.let(flattened::add)
             }
-            dewarpedVariant = dewarped
-            val showDewarped = dewarped != null && DewarpChoice.preferDewarped(
+            val bestFlat = flattened.maxByOrNull { it.ocr.qualityScore }
+            val showDewarped = bestFlat != null && DewarpChoice.preferDewarped(
                 originalScore = originalOcr.qualityScore,
-                dewarpedScore = dewarped.ocr.qualityScore,
+                dewarpedScore = bestFlat.ocr.qualityScore,
             )
-            val shown = if (showDewarped) dewarped else original
+            // Each version is then corrected word by word with what the other versions read.
+            val readings = listOf(originalOcr) + flattened.map { it.ocr }
+            val votedOriginal = original.copy(ocr = originalOcr.votedWith(readings - originalOcr))
+            val votedFlat = bestFlat?.let { best -> best.copy(ocr = best.ocr.votedWith(readings - best.ocr)) }
+            originalVariant = votedOriginal
+            dewarpedVariant = votedFlat
+            val shown = if (showDewarped && votedFlat != null) votedFlat else votedOriginal
             _uiState.update {
                 it.copy(
                     bitmap = shown.bitmap,
                     ocrResult = shown.ocr,
                     isDewarping = false,
-                    canToggleDewarp = dewarped != null,
+                    canToggleDewarp = votedFlat != null,
                     showingDewarped = showDewarped,
                 )
             }

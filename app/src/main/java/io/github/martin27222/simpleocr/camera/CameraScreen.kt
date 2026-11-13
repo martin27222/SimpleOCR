@@ -35,8 +35,10 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.FlashlightOff
 import androidx.compose.material.icons.outlined.FlashlightOn
+import androidx.compose.material.icons.outlined.HighQuality
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.RestartAlt
@@ -88,6 +90,7 @@ fun CameraScreen(
     multiPhotoCount: Int,
     isMergingPhotos: Boolean,
     lightOnAtStart: Boolean,
+    qualityByDefault: Boolean,
     onModeSelected: (CaptureMode) -> Unit,
     onPhotoCaptured: (Bitmap) -> Unit,
     onMultiPhotoDone: () -> Unit,
@@ -124,6 +127,7 @@ fun CameraScreen(
                 multiPhotoCount = multiPhotoCount,
                 isMergingPhotos = isMergingPhotos,
                 lightOnAtStart = lightOnAtStart,
+                qualityByDefault = qualityByDefault,
                 onModeSelected = onModeSelected,
                 onPhotoCaptured = onPhotoCaptured,
                 onMultiPhotoDone = onMultiPhotoDone,
@@ -149,6 +153,7 @@ private fun CameraContent(
     multiPhotoCount: Int,
     isMergingPhotos: Boolean,
     lightOnAtStart: Boolean,
+    qualityByDefault: Boolean,
     onModeSelected: (CaptureMode) -> Unit,
     onPhotoCaptured: (Bitmap) -> Unit,
     onMultiPhotoDone: () -> Unit,
@@ -170,9 +175,18 @@ private fun CameraContent(
             scaleType = PreviewView.ScaleType.FIT_CENTER
         }
     }
-    val imageCapture = remember {
+    // Speed: the photo is there at once. Quality: the camera takes more care and the photo keeps
+    // its full size, which helps with small print.
+    var qualityMode by rememberSaveable { mutableStateOf(qualityByDefault) }
+    val imageCapture = remember(qualityMode) {
         ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+            .setCaptureMode(
+                if (qualityMode) {
+                    ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY
+                } else {
+                    ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY
+                },
+            )
             .build()
     }
     var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
@@ -180,7 +194,7 @@ private fun CameraContent(
     var torchOn by rememberSaveable { mutableStateOf(lightOnAtStart) }
     var isCapturing by remember { mutableStateOf(false) }
 
-    LaunchedEffect(lifecycleOwner) {
+    LaunchedEffect(lifecycleOwner, imageCapture) {
         runCatching {
             val provider = ProcessCameraProvider.awaitInstance(context)
             val preview = Preview.Builder().build().also {
@@ -208,6 +222,7 @@ private fun CameraContent(
     fun capture() {
         if (isCapturing || camera == null) return
         isCapturing = true
+        val maxSide = if (qualityMode) CapturedPhoto.QUALITY_MAX_SIDE_PX else CapturedPhoto.MAX_SIDE_PX
         imageCapture.takePicture(
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageCapturedCallback() {
@@ -215,7 +230,7 @@ private fun CameraContent(
                     scope.launch {
                         val result = runCatching {
                             withContext(Dispatchers.Default) {
-                                image.use(CapturedPhoto::toUprightBitmap)
+                                image.use { CapturedPhoto.toUprightBitmap(it, maxSide) }
                             }
                         }
                         isCapturing = false
@@ -257,6 +272,22 @@ private fun CameraContent(
                     }
                 },
         )
+
+        IconButton(
+            onClick = { qualityMode = !qualityMode },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .padding(8.dp),
+        ) {
+            Icon(
+                if (qualityMode) Icons.Outlined.HighQuality else Icons.Outlined.Bolt,
+                contentDescription = stringResource(
+                    if (qualityMode) R.string.capture_quality else R.string.capture_speed,
+                ),
+                tint = Color.White,
+            )
+        }
 
         Row(
             modifier = Modifier

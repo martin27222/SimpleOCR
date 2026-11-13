@@ -79,4 +79,47 @@ class TextMergeTest {
         val result = merged(lines("Vorderseite der Packung"), lines("Rueckseite mit Hinweisen"))
         assertEquals(listOf("Vorderseite der Packung", "Rueckseite mit Hinweisen"), result)
     }
+
+    @Test
+    fun fourPhotosOfAFlatPageGiveEveryLineOnce() {
+        val merged = TextMerge.merge(
+            listOf(
+                lines("Pour the uncooked couscous into a large mixing t", "olive oil over the top. Work the olive oil onto the"),
+                lines("ouscous into a large mixing bowl and drizzle a little", ". Work the olive oil onto the grains by hand as this"),
+                lines("olive oil over the top. Work the olive oil onto the", "helps to keep the couscous from clumping togeth", "34"),
+                lines("the olive oil onto the grains by hand as this", "iscous from clumping together when it is cooked. Pour", "34"),
+            ),
+        )
+        assertEquals(
+            listOf(
+                "Pour the uncooked couscous into a large mixing bowl and drizzle a little",
+                "olive oil over the top. Work the olive oil onto the grains by hand as this",
+                "helps to keep the couscous from clumping together when it is cooked. Pour",
+                "34",
+            ),
+            merged.map { it.text },
+        )
+    }
+
+    @Test
+    fun badlyReadLinesAreLeftOut() {
+        val merged = TextMerge.merge(
+            listOf(
+                lines("Cover with cling film and leave to rest"),
+                listOf(ReadLine("ee eee SV ale +n cather", 0.39f), ReadLine("leave to rest for 5 minutes", 0.95f)),
+            ),
+        )
+        assertEquals(listOf("Cover with cling film and leave to rest for 5 minutes"), merged.map { it.text })
+    }
+
+    @Test
+    fun clearlySurerLineDecidesTheSharedStretch() {
+        val merged = TextMerge.merge(
+            listOf(
+                listOf(ReadLine("olive oil over the top. Work the olive oil onto", 0.95f)),
+                listOf(ReadLine("the top. WOrk the Olive Ol! onto the grains by hand", 0.70f)),
+            ),
+        )
+        assertEquals(listOf("olive oil over the top. Work the olive oil onto the grains by hand"), merged.map { it.text })
+    }
 }

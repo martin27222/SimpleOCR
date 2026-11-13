@@ -17,6 +17,8 @@ data class AppSettings(
     val autoSavePhotos: Boolean = false,
     /** Switch the light on when the camera opens. */
     val lightOnAtStart: Boolean = false,
+    /** Start the camera in quality mode instead of speed mode. */
+    val qualityCapture: Boolean = false,
 )
 
 /** Keeps the settings in a private preferences file on the device. */
@@ -32,6 +34,7 @@ class SettingsStore(context: Context) {
             autoCopy = preferences.getBoolean(AUTO_COPY, defaults.autoCopy),
             autoSavePhotos = preferences.getBoolean(AUTO_SAVE, defaults.autoSavePhotos),
             lightOnAtStart = preferences.getBoolean(LIGHT_ON, defaults.lightOnAtStart),
+            qualityCapture = preferences.getBoolean(QUALITY_CAPTURE, defaults.qualityCapture),
         )
     }
 
@@ -43,6 +46,7 @@ class SettingsStore(context: Context) {
             putBoolean(AUTO_COPY, settings.autoCopy)
             putBoolean(AUTO_SAVE, settings.autoSavePhotos)
             putBoolean(LIGHT_ON, settings.lightOnAtStart)
+            putBoolean(QUALITY_CAPTURE, settings.qualityCapture)
         }
     }
 
@@ -53,5 +57,6 @@ class SettingsStore(context: Context) {
         const val AUTO_COPY = "auto_copy"
         const val AUTO_SAVE = "auto_save_photos"
         const val LIGHT_ON = "light_on_at_start"
+        const val QUALITY_CAPTURE = "quality_capture"
     }
 }

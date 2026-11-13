@@ -13,8 +13,8 @@ class OcrTextTest {
         listOf(
             RecognizedTextBlock(
                 text = "Die Zei-\ntung von heute",
-                boundingBox = RectF2(0f, 0f, 100f, 60f),
-                lines = listOf(line("Die Zei-", 0f, 0f), line("tung von heute", 0f, 40f)),
+                boundingBox = RectF2(0f, 10f, 100f, 70f),
+                lines = listOf(line("Die Zei-", 0f, 10f), line("tung von heute", 0f, 50f)),
             ),
             RecognizedTextBlock(
                 text = "Seite 3",
@@ -40,5 +40,11 @@ class OcrTextTest {
         val lines = result.readLines()
         assertEquals(listOf("Die Zei-", "tung von heute", "Seite 3"), lines.map { it.text })
         assertEquals(0.9f, lines.first().confidence, 0f)
+    }
+
+    @Test
+    fun linesCutOffByThePhotoEdgeAreLeftOut() {
+        // The photo ends at y = 121, right below the last line (100..120).
+        assertEquals(listOf("Die Zei-", "tung von heute"), result.readLines(imageHeight = 121).map { it.text })
     }
 }

@@ -15,10 +15,17 @@ fun OcrResult.textToCopy(settings: AppSettings): String = TextFormatter.format(
     joinHyphenatedWords = settings.joinHyphenatedWords,
 )
 
-/** All lines of the photo in reading order, as input for merging several photos. */
-fun OcrResult.readLines(): List<ReadLine> = ReadingOrder.sort(
+/**
+ * All lines of the photo in reading order, as input for merging several photos.
+ * Lines cut off by the top or bottom edge of the photo are left out: they are half visible and
+ * read badly, and the neighbouring photo shows them whole.
+ */
+fun OcrResult.readLines(imageHeight: Int = Int.MAX_VALUE): List<ReadLine> = ReadingOrder.sort(
     blocks.flatMap { block ->
-        block.lines.map { line ->
+        block.lines.filter { line ->
+            val rim = EDGE_RIM * line.boundingBox.height
+            line.boundingBox.top > rim && line.boundingBox.bottom < imageHeight - rim
+        }.map { line ->
             PlacedLine(
                 text = line.text,
                 confidence = line.confidence,
@@ -29,3 +36,6 @@ fun OcrResult.readLines(): List<ReadLine> = ReadingOrder.sort(
         }
     },
 ).map { ReadLine(it.text, it.confidence) }
+
+/** A line closer to the photo edge than this share of its own height counts as cut off. */
+private const val EDGE_RIM = 0.15f

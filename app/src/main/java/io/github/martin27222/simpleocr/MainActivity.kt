@@ -125,6 +125,7 @@ class MainActivity : ComponentActivity() {
                         multiPhotoCount = state.multiPhotoCount,
                         isMergingPhotos = state.isMergingPhotos,
                         lightOnAtStart = settings.lightOnAtStart,
+                        qualityByDefault = settings.qualityCapture,
                         onModeSelected = viewModel::setCaptureMode,
                         onPhotoCaptured = { photo ->
                             if (state.captureMode == CaptureMode.MultiPhoto) {

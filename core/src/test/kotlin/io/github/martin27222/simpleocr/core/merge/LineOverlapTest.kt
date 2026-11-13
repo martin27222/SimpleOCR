@@ -5,36 +5,75 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class LineOverlapTest {
+    private fun joined(a: String, b: String, preferA: Boolean = true): String? =
+        LineOverlap.find(a, b)?.let { LineOverlap.join(a, b, it, preferA) }
+
     @Test
-    fun findsAnExactRepeat() {
-        val overlap = LineOverlap.find("Aqua, Alcohol Denat., Parf", "Denat., Parfum, Limonene")!!
-        assertEquals("Aqua, Alcohol ", "Aqua, Alcohol Denat., Parf".substring(0, overlap.leftKeep))
-        assertEquals("Denat., Parf", "Denat., Parfum, Limonene".substring(0, overlap.rightSkip))
-        assertEquals(0, overlap.errors)
+    fun lineContinuesInTheNextPhoto() {
+        assertEquals(
+            "Aqua, Alcohol Denat., Parfum, Limonene",
+            joined("Aqua, Alcohol Denat., Parf", "Denat., Parfum, Limonene"),
+        )
     }
 
     @Test
-    fun toleratesAReadingMistakeInsideTheRepeat() {
-        // "Limonene" was read as "Lim0nene" in the second photo.
-        val overlap = LineOverlap.find("Parfum, Limonene, Lina", "Lim0nene, Linalool, Citral")!!
-        assertEquals("Parfum, ", "Parfum, Limonene, Lina".substring(0, overlap.leftKeep))
-        assertEquals(1, overlap.errors)
+    fun orderOfTheTwoLinesDoesNotMatter() {
+        assertEquals(
+            "Aqua, Alcohol Denat., Parfum, Limonene",
+            joined("Denat., Parfum, Limonene", "Aqua, Alcohol Denat., Parf"),
+        )
     }
 
     @Test
-    fun aLineSeenCompletelyInBothPhotosOverlapsCompletely() {
-        val overlap = LineOverlap.find("Zutaten: Wasser, Zucker", "Zutaten: Wasser, Zucker")!!
-        assertEquals(0, overlap.leftKeep)
-        assertEquals("Zutaten: Wasser, Zucker".length, overlap.rightSkip)
+    fun cutOffLettersAtThePhotoEdgesAreDropped() {
+        // "mixing t" ends with a cut-off "b"; "ouscous" starts with a cut-off "c".
+        assertEquals(
+            "Pour the uncooked couscous into a large mixing bowl and drizzle a little",
+            joined(
+                "Pour the uncooked couscous into a large mixing t",
+                "ouscous into a large mixing bowl and drizzle a little",
+            ),
+        )
     }
 
     @Test
-    fun ignoresShortChanceRepeats() {
-        assertNull(LineOverlap.find("mit den", "den Zutaten mischen"))
+    fun lineInsideAnotherLineIsAbsorbed() {
+        assertEquals(
+            "helps to keep the couscous from clumping together",
+            joined("helps to keep the couscous from clumping together", "s to keep the couscous trom"),
+        )
+        assertEquals(
+            "helps to keep the couscous from clumping together",
+            joined("hing the couscous from cl", "helps to keep the couscous from clumping together"),
+        )
     }
 
     @Test
-    fun unrelatedLinesDoNotOverlap() {
-        assertNull(LineOverlap.find("Aqua, Alcohol Denat.", "Mindestens haltbar bis Ende"))
+    fun sameStretchKeepsThePreferredReading() {
+        assertEquals("salt and pepper", joined("salt and pepper", "salt and pepper", preferA = true))
+        assertEquals("salt and pcpper", joined("salt and pepper", "salt and pcpper", preferA = false))
+    }
+
+    @Test
+    fun readingMistakesInTheSharedStretchAreTolerated() {
+        assertEquals(
+            "boiling water over the couscous until all the grains are just submerged.",
+            joined("boiling water over the couscous until all the grair", "the couscous umtil all the grains are just submerged."),
+        )
+    }
+
+    @Test
+    fun shortLinesCountOnlyWhenExact() {
+        assertEquals("34", joined("34", "34"))
+        assertEquals("mixing bowl.", joined("mixing bowl.", "wl."))
+        assertNull(LineOverlap.find("34", "35"))
+        assertNull(LineOverlap.find("mixing bowl.", "wI."))
+    }
+
+    @Test
+    fun unrelatedLinesHaveNoOverlap() {
+        assertNull(LineOverlap.find("Cover with cling film and leave", "Chop the spring onions, celery"))
+        assertNull(LineOverlap.find("add them to the", "the grains by hand"))
+        assertNull(LineOverlap.find("", "anything"))
     }
 }

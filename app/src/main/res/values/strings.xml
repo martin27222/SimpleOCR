@@ -41,4 +41,8 @@
     <string name="setting_light_on">Light on at start</string>
     <string name="setting_light_on_description">The light is switched on when the camera opens.</string>
     <string name="privacy_text">Text is read on this device. Photos are never uploaded.\n\nSimpleOCR cannot use the internet at all: it does not ask for that permission. There are no ads, no statistics and no tracking.\n\nPhotos only stay in memory while they are shown. A photo is stored in the gallery only when the save button is pressed or \"Save every photo\" is switched on.</string>
+    <string name="capture_speed">Speed mode. Tap for quality mode</string>
+    <string name="capture_quality">Quality mode. Tap for speed mode</string>
+    <string name="setting_quality_capture">Start in quality mode</string>
+    <string name="setting_quality_capture_description">Photos are taken with more care and kept at full size. Slower. The symbol at the top left of the camera switches at any time.</string>
 </resources>
