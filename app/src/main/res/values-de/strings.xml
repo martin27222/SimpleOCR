@@ -1,0 +1,15 @@
+<resources>
+    <string name="take_photo">Foto aufnehmen</string>
+    <string name="choose_image">Bild auswählen</string>
+    <string name="toggle_light">Licht an oder aus</string>
+    <string name="privacy">Datenschutz</string>
+    <string name="camera_permission_needed">SimpleOCR braucht die Kamera, um Text zu fotografieren. Fotos bleiben auf diesem Gerät.</string>
+    <string name="allow_camera">Kamera erlauben</string>
+    <string name="camera_unavailable">Kamera ist nicht verfügbar</string>
+    <string name="capture_failed">Foto konnte nicht aufgenommen werden</string>
+    <string name="copy_all">Alles kopieren</string>
+    <string name="copied">Kopiert</string>
+    <string name="save_photo">Foto in Galerie speichern</string>
+    <string name="saved_to_gallery">Foto in Galerie gespeichert</string>
+    <string name="back_to_camera">Zurück zur Kamera</string>
+</resources>

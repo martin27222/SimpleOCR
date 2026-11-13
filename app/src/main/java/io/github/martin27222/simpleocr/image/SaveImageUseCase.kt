@@ -6,15 +6,12 @@ package io.github.martin27222.simpleocr.image
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -51,20 +48,6 @@ class SaveImageUseCase(
             resolver.delete(uri, null, null)
         }.getOrThrow()
         uri
-    }
-
-    suspend fun shareCopy(bitmap: Bitmap): Intent = withContext(Dispatchers.IO) {
-        val directory = File(context.cacheDir, "shared").apply { mkdirs() }
-        val file = File(directory, "SimpleOCR-${timestamp()}.png")
-        file.outputStream().use {
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
-        }
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
-        Intent(Intent.ACTION_SEND).apply {
-            type = "image/png"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
     }
 
     private fun timestamp(): String =

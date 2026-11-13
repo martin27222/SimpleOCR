@@ -19,7 +19,6 @@ import io.github.martin27222.simpleocr.ocr.OcrLanguage
 import io.github.martin27222.simpleocr.ocr.OcrRepository
 import io.github.martin27222.simpleocr.ui.CropPreset
 import io.github.martin27222.simpleocr.ui.CropState
-import io.github.martin27222.simpleocr.ui.DrawingStroke
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -39,14 +38,41 @@ class EditorViewModel(
     fun openIntent(intent: Intent?) {
         val input = intentHandler.extract(intent) ?: return
         intentHandler.tryPersistReadPermission(getApplication<Application>().contentResolver, input)
-        openUri(input.uri)
+        openUri(input.uri, openedExternally = true)
     }
 
-    fun openUri(uri: Uri) {
+    /** Shows a photo taken with the in-app camera. The bitmap only lives in memory. */
+    fun openCapturedPhoto(bitmap: Bitmap) {
+        ocrRepository.clear()
+        _uiState.update {
+            it.copy(
+                sourceUri = null,
+                bitmap = bitmap,
+                ocrResult = null,
+                isLoadingImage = false,
+                isRunningOcr = false,
+                openedExternally = false,
+                lastSavedUri = null,
+                errorMessage = null,
+            )
+        }
+        runOcr(force = true)
+    }
+
+    /** Drops the current image and returns to the camera. */
+    fun closeImage() {
+        ocrRepository.clear()
+        _uiState.update {
+            EditorUiState(language = it.language, overlaysEnabled = it.overlaysEnabled)
+        }
+    }
+
+    fun openUri(uri: Uri, openedExternally: Boolean = false) {
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     sourceUri = uri,
+                    openedExternally = openedExternally,
                     isLoadingImage = true,
                     isRunningOcr = false,
                     ocrResult = null,
@@ -121,24 +147,6 @@ class EditorViewModel(
         }
     }
 
-    fun applyDrawing(strokes: List<DrawingStroke>) {
-        val current = _uiState.value.bitmap ?: return
-        if (strokes.isEmpty()) return
-        viewModelScope.launch {
-            runCatching { BitmapEditor.drawStrokes(current, strokes) }
-                .onSuccess { bitmap ->
-                    ocrRepository.clear()
-                    _uiState.update { it.copy(bitmap = bitmap, ocrResult = null) }
-                    runOcr(force = true)
-                }
-                .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(errorMessage = throwable.message ?: "Could not apply drawing")
-                    }
-                }
-        }
-    }
-
     fun saveCopy() {
         val current = _uiState.value.bitmap ?: return
         viewModelScope.launch {
@@ -149,19 +157,6 @@ class EditorViewModel(
                 .onFailure { throwable ->
                     _uiState.update {
                         it.copy(errorMessage = throwable.message ?: "Could not save copy")
-                    }
-                }
-        }
-    }
-
-    fun share(onReady: (Intent) -> Unit) {
-        val current = _uiState.value.bitmap ?: return
-        viewModelScope.launch {
-            runCatching { saveImageUseCase.shareCopy(current) }
-                .onSuccess(onReady)
-                .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(errorMessage = throwable.message ?: "Could not share image")
                     }
                 }
         }

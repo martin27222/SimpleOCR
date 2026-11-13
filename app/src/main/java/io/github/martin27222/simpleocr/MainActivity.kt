@@ -10,17 +10,23 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import io.github.martin27222.simpleocr.camera.CameraScreen
+import io.github.martin27222.simpleocr.privacy.PrivacyScreen
 import io.github.martin27222.simpleocr.ui.ScreenshotEditorScreen
 import io.github.martin27222.simpleocr.ui.theme.SimpleOcrTheme
 
@@ -51,33 +57,49 @@ class MainActivity : ComponentActivity() {
                 ) { granted ->
                     if (granted) viewModel.saveCopy()
                 }
-                val shareChooserTitle = remember { "Share image" }
+                var showPrivacy by remember { mutableStateOf(false) }
 
-                ScreenshotEditorScreen(
-                    state = state,
-                    onOpenPicker = { imagePicker.launch("image/*") },
-                    onToggleOverlays = viewModel::toggleOverlays,
-                    onRotateLeft = viewModel::rotateLeft,
-                    onRotateRight = viewModel::rotateRight,
-                    onCrop = viewModel::cropTo,
-                    onApplyDrawing = viewModel::applyDrawing,
-                    onSaveCopy = {
-                        if (needsLegacyWritePermission()) {
-                            savePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                        } else {
-                            viewModel.saveCopy()
-                        }
-                    },
-                    onShare = {
-                        viewModel.share { shareIntent ->
-                            startActivity(Intent.createChooser(shareIntent, shareChooserTitle))
-                        }
-                    },
-                    onShowMessageConsumed = viewModel::clearMessage,
-                    onCopyAll = {},
-                    onRerunOcr = viewModel::rerunOcr,
-                    onLanguageSelected = viewModel::setLanguage,
-                )
+                // An image opened from another app closes back into that app.
+                BackHandler(enabled = state.hasImage && !state.openedExternally) {
+                    viewModel.closeImage()
+                }
+
+                if (state.hasImage || state.isLoadingImage) {
+                    ScreenshotEditorScreen(
+                        state = state,
+                        onOpenPicker = { imagePicker.launch("image/*") },
+                        onToggleOverlays = viewModel::toggleOverlays,
+                        onRotateLeft = viewModel::rotateLeft,
+                        onRotateRight = viewModel::rotateRight,
+                        onCrop = viewModel::cropTo,
+                        onSaveCopy = {
+                            if (needsLegacyWritePermission()) {
+                                savePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            } else {
+                                viewModel.saveCopy()
+                            }
+                        },
+                        onBack = {
+                            if (state.openedExternally) finish() else viewModel.closeImage()
+                        },
+                        onShowMessageConsumed = viewModel::clearMessage,
+                        onCopyAll = {},
+                        onRerunOcr = viewModel::rerunOcr,
+                        onLanguageSelected = viewModel::setLanguage,
+                    )
+                } else {
+                    CameraScreen(
+                        onPhotoCaptured = viewModel::openCapturedPhoto,
+                        onOpenPicker = { imagePicker.launch("image/*") },
+                        onShowPrivacy = { showPrivacy = true },
+                        onError = { message ->
+                            Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+                        },
+                    )
+                    if (showPrivacy) {
+                        PrivacyScreen(onDismiss = { showPrivacy = false })
+                    }
+                }
             }
         }
     }

@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">SimpleOCR</string>
+    <string name="take_photo">Take photo</string>
+    <string name="choose_image">Choose image</string>
+    <string name="toggle_light">Light on or off</string>
+    <string name="privacy">Privacy</string>
+    <string name="camera_permission_needed">SimpleOCR needs the camera to photograph text. Photos stay on this device.</string>
+    <string name="allow_camera">Allow camera</string>
+    <string name="camera_unavailable">Camera is not available</string>
+    <string name="capture_failed">Could not take the photo</string>
+    <string name="copy_all">Copy all</string>
+    <string name="copied">Copied</string>
+    <string name="save_photo">Save photo to gallery</string>
+    <string name="saved_to_gallery">Photo saved to gallery</string>
+    <string name="back_to_camera">Back to camera</string>
 </resources>

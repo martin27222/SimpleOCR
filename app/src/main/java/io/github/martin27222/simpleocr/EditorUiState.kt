@@ -14,6 +14,7 @@ data class EditorUiState(
     val ocrResult: OcrResult? = null,
     val language: OcrLanguage = OcrLanguage.EnglishGerman,
     val overlaysEnabled: Boolean = true,
+    val openedExternally: Boolean = false,
     val isLoadingImage: Boolean = false,
     val isRunningOcr: Boolean = false,
     val lastSavedUri: Uri? = null,

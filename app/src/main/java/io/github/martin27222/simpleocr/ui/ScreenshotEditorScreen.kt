@@ -71,7 +71,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
+import io.github.martin27222.simpleocr.R
 import androidx.compose.ui.unit.dp
 import io.github.martin27222.simpleocr.EditorUiState
 import io.github.martin27222.simpleocr.clipboard.ClipboardActions
@@ -93,9 +97,8 @@ fun ScreenshotEditorScreen(
     onRotateLeft: () -> Unit,
     onRotateRight: () -> Unit,
     onCrop: (CropState) -> Unit,
-    onApplyDrawing: (List<DrawingStroke>) -> Unit,
     onSaveCopy: () -> Unit,
-    onShare: () -> Unit,
+    onBack: () -> Unit,
     onShowMessageConsumed: () -> Unit,
     onCopyAll: () -> Unit,
     onRerunOcr: () -> Unit,
@@ -106,8 +109,6 @@ fun ScreenshotEditorScreen(
     val scope = rememberCoroutineScope()
     val rotation = remember { Animatable(0f) }
     val previewScale = remember { Animatable(1f) }
-    val drawingStrokes = remember { mutableStateListOf<DrawingStroke>() }
-    val undoneDrawingStrokes = remember { mutableStateListOf<DrawingStroke>() }
     var showOcrSheet by remember { mutableStateOf(false) }
     var showPrivacySheet by remember { mutableStateOf(false) }
     var transform by remember { mutableStateOf(ImageTransform()) }
@@ -115,19 +116,16 @@ fun ScreenshotEditorScreen(
     var activeTool by remember { mutableStateOf(EditorTool.View) }
     var cropState by remember { mutableStateOf<CropState?>(null) }
     var cropPreview by remember { mutableStateOf(false) }
-    var penSettings by remember { mutableStateOf(PenSettings()) }
-    var currentStroke by remember { mutableStateOf<DrawingStroke?>(null) }
+    val copiedMessage = stringResource(R.string.copied)
+    val savedMessage = stringResource(R.string.saved_to_gallery)
 
     LaunchedEffect(state.bitmap) {
         previewScale.snapTo(0.96f)
         previewScale.animateTo(1f, tween(durationMillis = 220, easing = FastOutSlowInEasing))
-        drawingStrokes.clear()
-        undoneDrawingStrokes.clear()
-        currentStroke = null
     }
 
     LaunchedEffect(state.errorMessage, state.lastSavedUri) {
-        val message = state.errorMessage ?: state.lastSavedUri?.let { "Saved copy" }
+        val message = state.errorMessage ?: state.lastSavedUri?.let { savedMessage }
         if (message != null) {
             snackbarHostState.showSnackbar(message)
             onShowMessageConsumed()
@@ -136,7 +134,7 @@ fun ScreenshotEditorScreen(
 
     fun copyText(text: String) {
         if (clipboardActions.copy(text)) {
-            scope.launch { snackbarHostState.showSnackbar("Copied") }
+            scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
         }
     }
 
@@ -145,10 +143,6 @@ fun ScreenshotEditorScreen(
         val imageSize = SizeF2(bitmap.width.toFloat(), bitmap.height.toFloat())
         cropState = cropState ?: CropState.initial(imageSize)
         activeTool = EditorTool.Crop
-    }
-
-    fun startDrawing() {
-        activeTool = EditorTool.Draw
     }
 
     fun rotateAnimated(direction: Float, rotate: () -> Unit) {
@@ -183,7 +177,16 @@ fun ScreenshotEditorScreen(
         containerColor = WorkbenchBackground,
         topBar = {
             TopAppBar(
-                title = { Text("SimpleOCR", color = Color.White) },
+                title = { Text(stringResource(R.string.app_name), color = Color.White) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = stringResource(R.string.back_to_camera),
+                            tint = Color.White,
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = WorkbenchBackground,
                     scrolledContainerColor = WorkbenchBackground,
@@ -213,7 +216,7 @@ fun ScreenshotEditorScreen(
         ) {
             val bitmap = state.bitmap
             val imageBottomPadding = when (activeTool) {
-                EditorTool.View -> 104.dp
+                EditorTool.View -> 172.dp
                 EditorTool.Crop,
                 EditorTool.Draw,
                 -> 232.dp
@@ -228,34 +231,18 @@ fun ScreenshotEditorScreen(
                     activeTool = activeTool,
                     cropState = cropState,
                     cropPreview = cropPreview,
-                    drawingStrokes = drawingStrokes,
-                    currentStroke = currentStroke,
-                    penSettings = penSettings,
+                    drawingStrokes = emptyList(),
+                    currentStroke = null,
+                    penSettings = PenSettings(),
                     canvasRotation = rotation.value,
                     previewScale = previewScale.value,
                     onViewportChanged = { viewportSize = it },
                     onTransformChanged = { transform = it },
                     onCropChanged = { cropState = it },
                     onCropPreviewChanged = { cropPreview = it },
-                    onDrawStart = { point ->
-                        currentStroke = DrawingStroke(
-                            points = listOf(point),
-                            color = penSettings.color,
-                            width = penSettings.width,
-                        )
-                    },
-                    onDrawMove = { point ->
-                        currentStroke = currentStroke?.copy(
-                            points = currentStroke?.points.orEmpty() + point,
-                        )
-                    },
-                    onDrawEnd = {
-                        currentStroke?.takeIf { it.points.size > 1 }?.let {
-                            drawingStrokes.add(it)
-                            undoneDrawingStrokes.clear()
-                        }
-                        currentStroke = null
-                    },
+                    onDrawStart = {},
+                    onDrawMove = {},
+                    onDrawEnd = {},
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(bottom = imageBottomPadding),
@@ -275,16 +262,15 @@ fun ScreenshotEditorScreen(
                 enabled = state.hasImage,
                 activeTool = activeTool,
                 cropState = cropState,
-                penSettings = penSettings,
-                hasDrawing = drawingStrokes.isNotEmpty() || currentStroke != null,
-                canUndoDrawing = drawingStrokes.isNotEmpty(),
-                canRedoDrawing = undoneDrawingStrokes.isNotEmpty(),
+                canCopyAll = state.fullText.isNotBlank(),
+                onCopyAll = {
+                    copyText(state.fullText)
+                    onCopyAll()
+                },
                 onCrop = ::startCrop,
-                onDraw = ::startDrawing,
                 onRotateLeft = { rotateAnimated(-1f, onRotateLeft) },
                 onRotateRight = { rotateAnimated(1f, onRotateRight) },
                 onSaveCopy = onSaveCopy,
-                onShare = onShare,
                 onOcrText = { showOcrSheet = true },
                 onCropPreset = { preset ->
                     val current = state.bitmap ?: return@EditorFloatingControls
@@ -304,31 +290,6 @@ fun ScreenshotEditorScreen(
                     activeTool = EditorTool.View
                     cropState = null
                     cropPreview = false
-                },
-                onPenSettings = { penSettings = it },
-                onUndoDrawing = {
-                    if (drawingStrokes.isNotEmpty()) {
-                        undoneDrawingStrokes.add(drawingStrokes.removeAt(drawingStrokes.lastIndex))
-                    }
-                },
-                onRedoDrawing = {
-                    if (undoneDrawingStrokes.isNotEmpty()) {
-                        drawingStrokes.add(undoneDrawingStrokes.removeAt(undoneDrawingStrokes.lastIndex))
-                    }
-                },
-                onApplyDrawing = {
-                    val strokes = drawingStrokes.toList()
-                    onApplyDrawing(strokes)
-                    drawingStrokes.clear()
-                    undoneDrawingStrokes.clear()
-                    currentStroke = null
-                    activeTool = EditorTool.View
-                },
-                onCancelDrawing = {
-                    drawingStrokes.clear()
-                    undoneDrawingStrokes.clear()
-                    currentStroke = null
-                    activeTool = EditorTool.View
                 },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
@@ -401,25 +362,16 @@ private fun EditorFloatingControls(
     enabled: Boolean,
     activeTool: EditorTool,
     cropState: CropState?,
-    penSettings: PenSettings,
-    hasDrawing: Boolean,
-    canUndoDrawing: Boolean,
-    canRedoDrawing: Boolean,
+    canCopyAll: Boolean,
+    onCopyAll: () -> Unit,
     onCrop: () -> Unit,
-    onDraw: () -> Unit,
     onRotateLeft: () -> Unit,
     onRotateRight: () -> Unit,
     onSaveCopy: () -> Unit,
-    onShare: () -> Unit,
     onOcrText: () -> Unit,
     onCropPreset: (CropPreset) -> Unit,
     onApplyCrop: () -> Unit,
     onCancelCrop: () -> Unit,
-    onPenSettings: (PenSettings) -> Unit,
-    onUndoDrawing: () -> Unit,
-    onRedoDrawing: () -> Unit,
-    onApplyDrawing: () -> Unit,
-    onCancelDrawing: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -445,21 +397,15 @@ private fun EditorFloatingControls(
         }
 
         AnimatedVisibility(
-            visible = activeTool == EditorTool.Draw,
+            visible = activeTool == EditorTool.View && canCopyAll,
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
-            FloatingPanel {
-                DrawControlPanel(
-                    penSettings = penSettings,
-                    hasDrawing = hasDrawing,
-                    canUndo = canUndoDrawing,
-                    canRedo = canRedoDrawing,
-                    onPenSettings = onPenSettings,
-                    onUndo = onUndoDrawing,
-                    onRedo = onRedoDrawing,
-                    onApply = onApplyDrawing,
-                    onCancel = onCancelDrawing,
+            Button(onClick = onCopyAll) {
+                Icon(Icons.Outlined.ContentCopy, contentDescription = null)
+                Text(
+                    text = stringResource(R.string.copy_all),
+                    modifier = Modifier.padding(start = 8.dp),
                 )
             }
         }
@@ -480,9 +426,6 @@ private fun EditorFloatingControls(
                 FloatingToolButton(selected = activeTool == EditorTool.Crop, enabled = enabled, onClick = onCrop) {
                     Icon(Icons.Outlined.Crop, contentDescription = "Crop")
                 }
-                FloatingToolButton(selected = activeTool == EditorTool.Draw, enabled = enabled, onClick = onDraw) {
-                    Icon(Icons.Outlined.Edit, contentDescription = "Draw")
-                }
                 CompactIconButton(onClick = onRotateLeft, enabled = enabled) {
                     Icon(Icons.Outlined.RotateLeft, contentDescription = "Rotate left")
                 }
@@ -490,10 +433,7 @@ private fun EditorFloatingControls(
                     Icon(Icons.Outlined.RotateRight, contentDescription = "Rotate right")
                 }
                 CompactIconButton(onClick = onSaveCopy, enabled = enabled) {
-                    Icon(Icons.Outlined.SaveAlt, contentDescription = "Save copy")
-                }
-                CompactIconButton(onClick = onShare, enabled = enabled) {
-                    Icon(Icons.Outlined.Share, contentDescription = "Share")
+                    Icon(Icons.Outlined.SaveAlt, contentDescription = stringResource(R.string.save_photo))
                 }
                 CompactIconButton(onClick = onOcrText, enabled = enabled) {
                     Icon(Icons.Outlined.Subject, contentDescription = "Full OCR text")
@@ -586,97 +526,5 @@ private fun CropControlPanel(
                 Text("Apply")
             }
         }
-    }
-}
-
-@Composable
-private fun DrawControlPanel(
-    penSettings: PenSettings,
-    hasDrawing: Boolean,
-    canUndo: Boolean,
-    canRedo: Boolean,
-    onPenSettings: (PenSettings) -> Unit,
-    onUndo: () -> Unit,
-    onRedo: () -> Unit,
-    onApply: () -> Unit,
-    onCancel: () -> Unit,
-) {
-    val colors = listOf(
-        0xFFF59E0B.toInt(),
-        0xFF14B8A6.toInt(),
-        0xFF2563EB.toInt(),
-        0xFFEF4444.toInt(),
-        0xFFFFFFFF.toInt(),
-        0xFF111827.toInt(),
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Outlined.ColorLens, contentDescription = null)
-            colors.forEach { color ->
-                ColorSwatch(
-                    color = color,
-                    selected = penSettings.color == color,
-                    onClick = { onPenSettings(penSettings.copy(color = color)) },
-                )
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            CompactIconButton(onClick = onUndo, enabled = canUndo) {
-                Icon(Icons.AutoMirrored.Outlined.Undo, contentDescription = "Undo drawing")
-            }
-            CompactIconButton(onClick = onRedo, enabled = canRedo) {
-                Icon(Icons.AutoMirrored.Outlined.Redo, contentDescription = "Redo drawing")
-            }
-            Text("Size")
-            Slider(
-                value = penSettings.width,
-                onValueChange = { onPenSettings(penSettings.copy(width = it)) },
-                valueRange = 3f..36f,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onCancel) {
-                Icon(Icons.Outlined.Close, contentDescription = null)
-                Text("Cancel")
-            }
-            Button(onClick = onApply, enabled = hasDrawing) {
-                Icon(Icons.Outlined.Check, contentDescription = null)
-                Text("Apply")
-            }
-        }
-    }
-}
-
-@Composable
-private fun ColorSwatch(
-    color: Int,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    IconButton(onClick = onClick, modifier = Modifier.size(42.dp)) {
-        Box(
-            modifier = Modifier
-                .size(if (selected) 34.dp else 30.dp)
-                .clip(CircleShape)
-                .background(Color(color))
-                .border(
-                    width = if (selected) 3.dp else 1.dp,
-                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                    shape = CircleShape,
-                ),
-        )
     }
 }
