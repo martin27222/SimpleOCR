@@ -3,6 +3,8 @@
 
 package io.github.martin27222.simpleocr.ocr
 
+import io.github.martin27222.simpleocr.core.merge.ReadWord
+import io.github.martin27222.simpleocr.core.rectify.Glyph
 import io.github.martin27222.simpleocr.geometry.RectF2
 
 data class OcrResult(
@@ -35,6 +37,10 @@ data class OcrTextLine(
     val boundingBox: RectF2,
     /** 0..1, how sure the recognizer is about this line. */
     val confidence: Float = 1f,
+    /** The words of the line with their own confidence, for comparing several readings. */
+    val words: List<ReadWord> = emptyList(),
+    /** Where the characters of the line sit in the image, for flattening the page. */
+    val glyphs: List<Glyph> = emptyList(),
 )
 
 enum class OcrLanguage(val label: String) {

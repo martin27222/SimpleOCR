@@ -12,8 +12,8 @@ Early development. Builds exist for 64-bit ARM phones only.
 | --- | --- |
 | Open an image from another app and copy its text | works (from EasyOCR) |
 | Take the photo inside the app | works, needs testing on real devices |
-| Straighten curved pages (book pages) before recognition | works on test images, needs testing on real photos |
-| Combine several photos of a round object (bottle labels) into one text | works on test texts, needs testing on real photos |
+| Straighten curved or tilted pages (book pages) before recognition | works, tested on one real photo so far |
+| Combine several photos of a round object (bottle labels) into one text | works on simulated photos, needs testing on real ones |
 | Settings | works, needs testing on real devices |
 
 Target languages are German and English. The target device is a Pixel 9, the app runs on Android 8 and newer.
@@ -36,13 +36,20 @@ ML Kit is not open source. The SimpleOCR code is Apache 2.0, the ML Kit library 
 
 ## Flattening curved pages
 
-A photo of an open book has bent text lines. SimpleOCR first reads the photo as taken, so text shows up at once. It then flattens the photo with the [UVDoc](https://github.com/tanguymagne/UVDoc) network (MIT License), reads it again and switches to the flattened version only if that reads clearly better. A button swaps between both versions.
+A photo of an open book has bent, tilted text lines, and letters on the far side of the page are squeezed. SimpleOCR first reads the photo as taken, so text shows up at once. It then flattens the photo in two ways, reads both results and switches to the best one only if it reads clearly better than the photo as taken. A button swaps between the photo and its flattened version.
+
+| Method | How it works |
+| --- | --- |
+| Guided by the text | The first reading tells where every word is. From that the app works out how the photo must be pulled so that all lines are straight and all letters equally wide. Plain geometry and least squares, no model; see `TextRectifier` in the `core` module |
+| [UVDoc](https://github.com/tanguymagne/UVDoc) network (MIT License) | A small neural network estimates the shape of the page from the whole photo. It helps when the first reading finds too little text to go by |
+
+Finally the readings correct each other word by word: where they disagree, the spelling most of them share wins, otherwise the word the recognizer was surest about.
 
 The network runs on the device through [ONNX Runtime](https://github.com/microsoft/onnxruntime) (MIT License). The model file was converted from the original UVDoc checkpoint for this project; [third_party/uvdoc](third_party/uvdoc/README.md) documents where it comes from and how to rebuild it.
 
 ## Several photos of a round object
 
-The label of a bottle does not fit into one photo. In the mode "Several photos" the object is turned a little after each photo, so that about a third of the text is in two photos. SimpleOCR reads every photo and joins the texts: it looks for the longest piece of text that ends a line in one photo and starts the matching line in the next, and keeps that piece once. Where both photos read the shared piece differently, the reading the recognizer was surer about wins.
+The label of a bottle does not fit into one photo. In the mode "Several photos" the object is turned a little after each photo, so that about a third of the text is in two photos. SimpleOCR reads every photo and joins the texts line by line: it looks for the stretch of text two lines share and keeps it once. Letters at the edge of a photo are often cut off, so the first half of the shared stretch is taken from the photo that shows the start of the line and the second half from the photo that continues it. The same works for a flat page photographed in several parts.
 
 Example: `Aqua, Alcohol Denat., Parf` and `Denat., Parfum, Limonene` become `Aqua, Alcohol Denat., Parfum, Limonene`.
 
@@ -60,6 +67,9 @@ The app works without touching any setting.
 | Copy text automatically after a photo | off |
 | Save every photo to the gallery | off |
 | Light on at start | off |
+| Start in quality mode | off |
+
+The camera has two capture modes, switched with the symbol at its top left: speed (the photo is there at once) and quality (the camera takes more care and the photo keeps its full size, which helps with small print).
 
 ## Install a development build
 

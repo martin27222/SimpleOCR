@@ -75,6 +75,12 @@ fun SettingsSheet(
                 checked = settings.lightOnAtStart,
                 onCheckedChange = { onChange(settings.copy(lightOnAtStart = it)) },
             )
+            SettingRow(
+                title = stringResource(R.string.setting_quality_capture),
+                description = stringResource(R.string.setting_quality_capture_description),
+                checked = settings.qualityCapture,
+                onCheckedChange = { onChange(settings.copy(qualityCapture = it)) },
+            )
         }
     }
 }

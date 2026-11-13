@@ -4,48 +4,42 @@ package io.github.martin27222.simpleocr.core.merge
 data class ReadLine(val text: String, val confidence: Float = 1f)
 
 /**
- * Joins the text of several photos of the same label into one text.
+ * Joins the text of several overlapping photos of the same object into one text.
  *
- * Each photo is a list of lines from top to bottom. Photos overlap: a line continues from one
- * photo into the next, and the shared part appears in both. The merge
- *  1. pairs up lines of two photos so that the total length of shared text is as large as
- *     possible, keeping the top-to-bottom order of both photos;
- *  2. glues each pair together at its shared part, which is kept once;
+ * Each photo is a list of lines from top to bottom. A printed line usually shows up in several
+ * photos, each holding a part of it. Photo by photo, the merge
+ *  1. pairs lines of the text so far with lines of the next photo, so that the paired lines share
+ *     as much text as possible and the top-to-bottom order of both is kept;
+ *  2. joins each pair at its shared stretch, which is kept once (see [LineOverlap]);
  *  3. keeps lines without a partner unchanged, in order.
  *
- * It also covers photos taken one below the other: a line that is fully visible in both photos
- * overlaps completely and is kept once.
+ * Lines the recognizer was very unsure about are left out.
+ *
+ * This covers photos taken side by side (round objects), one below the other, or both.
  */
 object TextMerge {
     fun merge(photos: List<List<ReadLine>>): List<ReadLine> {
         var merged = emptyList<ReadLine>()
         for (photo in photos) {
-            val lines = photo.filter { it.text.isNotBlank() }
+            val lines = photo
+                .map { it.copy(text = it.text.trim()) }
+                .filter { it.text.isNotEmpty() && it.confidence >= MIN_CONFIDENCE }
             merged = when {
                 merged.isEmpty() -> lines
                 lines.isEmpty() -> merged
-                else -> {
-                    // The next photo usually continues to the right. If the object was turned
-                    // the other way, it continues to the left; the better fit decides.
-                    val forward = join(merged, lines)
-                    val backward = join(lines, merged)
-                    if (backward.score > forward.score) backward.lines else forward.lines
-                }
+                else -> join(merged, lines)
             }
         }
         return merged
     }
 
-    private class Joined(val lines: List<ReadLine>, val score: Int)
-
-    /** Joins two photos, assuming lines of [first] continue in [second]. */
-    private fun join(first: List<ReadLine>, second: List<ReadLine>): Joined {
+    private fun join(first: List<ReadLine>, second: List<ReadLine>): List<ReadLine> {
         val rows = first.size
         val cols = second.size
         val overlaps = Array(rows) { i -> Array(cols) { j -> LineOverlap.find(first[i].text, second[j].text) } }
 
-        // best[i][j]: largest total overlap score using the first i lines of one photo and the
-        // first j lines of the other. A line is either paired with one line or left alone.
+        // best[i][j]: largest total overlap score using the first i lines of the text so far and
+        // the first j lines of the new photo. A line is either paired with one line or left alone.
         val best = Array(rows + 1) { IntArray(cols + 1) }
         for (i in 1..rows) {
             for (j in 1..cols) {
@@ -68,22 +62,30 @@ object TextMerge {
                     i--
                     j--
                 }
-                // Unpaired lines of the second photo go below unpaired lines of the first.
+                // Unpaired lines of the new photo go below unpaired lines of the text so far.
                 j > 0 && (i == 0 || best[i][j] == best[i][j - 1]) -> lines += second[--j]
                 else -> lines += first[--i]
             }
         }
         lines.reverse()
-        return Joined(lines, best[rows][cols])
+        return lines
     }
 
-    /** The shared part is taken from the line the recognizer was surer about. */
-    private fun glue(left: ReadLine, right: ReadLine, overlap: LineOverlap.Overlap): ReadLine {
-        val text = if (right.confidence >= left.confidence) {
-            left.text.substring(0, overlap.leftKeep) + right.text
-        } else {
-            left.text + right.text.substring(overlap.rightSkip)
+    private fun glue(a: ReadLine, b: ReadLine, overlap: LineOverlap.Overlap): ReadLine {
+        val trusted = when {
+            a.confidence - b.confidence > CLEARLY_SURER -> -1
+            b.confidence - a.confidence > CLEARLY_SURER -> 1
+            else -> 0
         }
-        return ReadLine(text, minOf(left.confidence, right.confidence))
+        return ReadLine(
+            text = LineOverlap.join(a.text, b.text, overlap, preferA = a.confidence >= b.confidence, trusted = trusted),
+            confidence = maxOf(a.confidence, b.confidence),
+        )
     }
+
+    /** Lines the recognizer was this unsure about are mostly noise, such as half-visible lines. */
+    private const val MIN_CONFIDENCE = 0.5f
+
+    /** From this difference in confidence on, the surer line decides the whole shared stretch. */
+    private const val CLEARLY_SURER = 0.15f
 }

@@ -40,4 +40,8 @@
     <string name="setting_light_on">Licht beim Start an</string>
     <string name="setting_light_on_description">Das Licht wird eingeschaltet, sobald die Kamera startet.</string>
     <string name="privacy_text">Text wird auf diesem Gerät gelesen. Fotos werden nie hochgeladen.\n\nSimpleOCR kann das Internet gar nicht nutzen: Die App fragt diese Berechtigung nicht an. Es gibt keine Werbung, keine Statistik und kein Tracking.\n\nFotos liegen nur im Arbeitsspeicher, solange sie angezeigt werden. Ein Foto wird nur dann in der Galerie gespeichert, wenn der Speichern-Knopf gedrückt wird oder „Jedes Foto speichern“ eingeschaltet ist.</string>
+    <string name="capture_speed">Tempo-Modus. Tippen für Qualitäts-Modus</string>
+    <string name="capture_quality">Qualitäts-Modus. Tippen für Tempo-Modus</string>
+    <string name="setting_quality_capture">Im Qualitäts-Modus starten</string>
+    <string name="setting_quality_capture_description">Fotos werden sorgfältiger aufgenommen und in voller Größe gelesen. Langsamer. Das Symbol links oben in der Kamera schaltet jederzeit um.</string>
 </resources>
