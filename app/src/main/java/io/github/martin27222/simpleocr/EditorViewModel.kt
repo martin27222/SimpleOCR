@@ -245,7 +245,7 @@ class EditorViewModel(
                             lastSavedUri = null,
                         )
                     }
-                    if (openedExternally) runOcr(force = true) else readPhoto(bitmap, _settings.value.run { level(quality).passes })
+                    readPhoto(bitmap, startPasses())
                 }
                 .onFailure { throwable ->
                     _uiState.update {
@@ -276,9 +276,9 @@ class EditorViewModel(
 
     fun setLanguage(language: OcrLanguage) {
         if (_uiState.value.language == language) return
-        forgetVariants()
-        _uiState.update { it.copy(language = language, ocrResult = null) }
-        runOcr(force = true)
+        val photo = photoToReadAgain() ?: return
+        _uiState.update { it.copy(language = language) }
+        readAgain(photo)
     }
 
     fun toggleOverlays() {
@@ -286,9 +286,27 @@ class EditorViewModel(
     }
 
     fun rerunOcr() {
-        forgetVariants()
-        runOcr(force = true)
+        readAgain(photoToReadAgain() ?: return)
     }
+
+    /**
+     * The photo as taken, not its flattened version: every new reading flattens it again in
+     * the same steps as a new photo. Stops the reading that is still running.
+     */
+    private fun photoToReadAgain(): Bitmap? {
+        val photo = originalVariant?.bitmap ?: _uiState.value.bitmap
+        forgetVariants()
+        return photo
+    }
+
+    /** Reads an edited or turned photo in all steps, like a new photo: flattened and voted. */
+    private fun readAgain(bitmap: Bitmap) {
+        ocrRepository.clear()
+        _uiState.update { it.copy(bitmap = bitmap, ocrResult = null) }
+        readPhoto(bitmap, startPasses())
+    }
+
+    private fun startPasses(): Int = _settings.value.run { level(quality).passes }
 
     fun rotateLeft() {
         rotate(-90f)
@@ -310,9 +328,7 @@ class EditorViewModel(
                 }
             }
                 .onSuccess { bitmap ->
-                    ocrRepository.clear()
-                    _uiState.update { it.copy(bitmap = bitmap, ocrResult = null) }
-                    runOcr(force = true)
+                    readAgain(bitmap)
                 }
                 .onFailure { throwable ->
                     _uiState.update {
@@ -460,36 +476,8 @@ class EditorViewModel(
     }
 
     private fun rotate(degrees: Float) {
-        val current = _uiState.value.bitmap ?: return
-        forgetVariants()
-        viewModelScope.launch {
-            val rotated = BitmapEditor.rotate(current, degrees)
-            ocrRepository.clear()
-            _uiState.update { it.copy(bitmap = rotated, ocrResult = null) }
-            runOcr(force = true)
-        }
-    }
-
-    private fun runOcr(force: Boolean) {
-        val current: Bitmap = _uiState.value.bitmap ?: return
-        val language = _uiState.value.language
-        viewModelScope.launch {
-            _uiState.update { it.copy(isRunningOcr = true, errorMessage = null) }
-            runCatching { ocrRepository.recognize(current, language, force) }
-                .onSuccess { result ->
-                    _uiState.update {
-                        it.copy(ocrResult = result, isRunningOcr = false)
-                    }
-                }
-                .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(
-                            isRunningOcr = false,
-                            errorMessage = throwable.message ?: "OCR failed",
-                        )
-                    }
-                }
-        }
+        val photo = photoToReadAgain() ?: return
+        viewModelScope.launch { readAgain(BitmapEditor.rotate(photo, degrees)) }
     }
 
     companion object {

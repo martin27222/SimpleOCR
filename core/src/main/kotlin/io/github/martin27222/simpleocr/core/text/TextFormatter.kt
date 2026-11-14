@@ -40,6 +40,11 @@ object TextFormatter {
                 !endsWithWordHyphen(previous) || firstWord.lowercase() in listWords -> null
                 // "Zusammen-" + "fassung" is one word that was split to fit the line.
                 firstWord.first().isLowerCase() -> previous.dropLast(1) + firstWord
+                // "inter-" + "Course": a c, o, s, ... looks the same in both cases, so the reader
+                // often takes the small letter for a capital. After a word part in small letters
+                // and before small letters it can only be a small letter.
+                looksMisreadAsCapital(previous, firstWord) ->
+                    previous.dropLast(1) + firstWord.first().lowercaseChar() + firstWord.drop(1)
                 // "Kosten-" + "Nutzen" is a compound that keeps its hyphen.
                 firstWord.first().isLetterOrDigit() -> previous + firstWord
                 else -> null
@@ -56,6 +61,17 @@ object TextFormatter {
         }
         carried?.let { result += it }
         return result
+    }
+
+    /** Letters whose capital has the same shape as the small letter, only bigger. */
+    private const val SAME_SHAPE_CAPITALS = "COSUVWXZ"
+
+    private fun looksMisreadAsCapital(previous: String, firstWord: String): Boolean {
+        val part = previous.dropLast(1).substringAfterLast(' ')
+        val letters = firstWord.drop(1).filter(Char::isLetter)
+        return firstWord.first() in SAME_SHAPE_CAPITALS &&
+            letters.isNotEmpty() && letters.all(Char::isLowerCase) &&
+            part.isNotEmpty() && part.first().isLowerCase()
     }
 
     private fun endsWithWordHyphen(line: String): Boolean =
