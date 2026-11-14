@@ -3,6 +3,9 @@
 
 package io.github.martin27222.simpleocr.ui
 
+import io.github.martin27222.simpleocr.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,6 +37,8 @@ fun OcrBottomSheet(
     language: OcrLanguage,
     onLanguageSelected: (OcrLanguage) -> Unit,
     onCopyAll: () -> Unit,
+    /** Copies the chosen frame; null when the page has only one. */
+    onCopyFrame: (() -> Unit)?,
     onRerunOcr: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -41,14 +46,21 @@ fun OcrBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                // Wide side margins: the first and last word of a line must be reachable with a
+                // finger without starting the system's "back" swipe from the screen edge.
+                .padding(horizontal = SELECTABLE_TEXT_MARGIN, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text("Detected text")
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(onClick = onCopyAll, enabled = fullText.isNotBlank()) {
                     Icon(Icons.Outlined.ContentCopy, contentDescription = null)
-                    Text("Copy all")
+                    Text(stringResource(R.string.copy_all))
+                }
+                if (onCopyFrame != null) {
+                    FilledTonalButton(onClick = onCopyFrame) {
+                        Text(stringResource(R.string.copy_frame))
+                    }
                 }
                 TextButton(onClick = onRerunOcr) {
                     Icon(Icons.Outlined.Refresh, contentDescription = null)
@@ -75,3 +87,6 @@ fun OcrBottomSheet(
         }
     }
 }
+
+/** Side margin of text that can be selected by hand, see [OcrBottomSheet]. */
+val SELECTABLE_TEXT_MARGIN = 40.dp

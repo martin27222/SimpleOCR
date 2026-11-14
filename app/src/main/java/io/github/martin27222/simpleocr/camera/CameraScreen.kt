@@ -35,10 +35,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.FlashlightOff
 import androidx.compose.material.icons.outlined.FlashlightOn
-import androidx.compose.material.icons.outlined.HighQuality
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.RestartAlt
@@ -66,6 +64,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import io.github.martin27222.simpleocr.settings.Quality
+import io.github.martin27222.simpleocr.settings.QualityLevel
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -90,9 +93,10 @@ fun CameraScreen(
     multiPhotoCount: Int,
     isMergingPhotos: Boolean,
     lightOnAtStart: Boolean,
-    qualityByDefault: Boolean,
+    defaultQuality: Quality,
+    levelOf: (Quality) -> QualityLevel,
     onModeSelected: (CaptureMode) -> Unit,
-    onPhotoCaptured: (Bitmap) -> Unit,
+    onPhotoCaptured: (Bitmap, QualityLevel) -> Unit,
     onMultiPhotoDone: () -> Unit,
     onMultiPhotoReset: () -> Unit,
     onOpenPicker: () -> Unit,
@@ -127,7 +131,8 @@ fun CameraScreen(
                 multiPhotoCount = multiPhotoCount,
                 isMergingPhotos = isMergingPhotos,
                 lightOnAtStart = lightOnAtStart,
-                qualityByDefault = qualityByDefault,
+                defaultQuality = defaultQuality,
+                levelOf = levelOf,
                 onModeSelected = onModeSelected,
                 onPhotoCaptured = onPhotoCaptured,
                 onMultiPhotoDone = onMultiPhotoDone,
@@ -153,9 +158,10 @@ private fun CameraContent(
     multiPhotoCount: Int,
     isMergingPhotos: Boolean,
     lightOnAtStart: Boolean,
-    qualityByDefault: Boolean,
+    defaultQuality: Quality,
+    levelOf: (Quality) -> QualityLevel,
     onModeSelected: (CaptureMode) -> Unit,
-    onPhotoCaptured: (Bitmap) -> Unit,
+    onPhotoCaptured: (Bitmap, QualityLevel) -> Unit,
     onMultiPhotoDone: () -> Unit,
     onMultiPhotoReset: () -> Unit,
     onOpenPicker: () -> Unit,
@@ -175,13 +181,13 @@ private fun CameraContent(
             scaleType = PreviewView.ScaleType.FIT_CENTER
         }
     }
-    // Speed: the photo is there at once. Quality: the camera takes more care and the photo keeps
-    // its full size, which helps with small print.
-    var qualityMode by rememberSaveable { mutableStateOf(qualityByDefault) }
-    val imageCapture = remember(qualityMode) {
+    var quality by rememberSaveable { mutableStateOf(defaultQuality) }
+    val level = levelOf(quality)
+    val carefulCapture = level.carefulCapture
+    val imageCapture = remember(carefulCapture) {
         ImageCapture.Builder()
             .setCaptureMode(
-                if (qualityMode) {
+                if (carefulCapture) {
                     ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY
                 } else {
                     ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY
@@ -222,7 +228,7 @@ private fun CameraContent(
     fun capture() {
         if (isCapturing || camera == null) return
         isCapturing = true
-        val maxSide = if (qualityMode) CapturedPhoto.QUALITY_MAX_SIDE_PX else CapturedPhoto.MAX_SIDE_PX
+        val shotLevel = level
         imageCapture.takePicture(
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageCapturedCallback() {
@@ -230,11 +236,11 @@ private fun CameraContent(
                     scope.launch {
                         val result = runCatching {
                             withContext(Dispatchers.Default) {
-                                image.use { CapturedPhoto.toUprightBitmap(it, maxSide) }
+                                image.use { CapturedPhoto.toUprightBitmap(it, shotLevel.maxSide) }
                             }
                         }
                         isCapturing = false
-                        result.onSuccess(onPhotoCaptured).onFailure { onError(captureFailedMessage) }
+                        result.onSuccess { onPhotoCaptured(it, shotLevel) }.onFailure { onError(captureFailedMessage) }
                     }
                 }
 
@@ -273,20 +279,16 @@ private fun CameraContent(
                 },
         )
 
-        IconButton(
-            onClick = { qualityMode = !qualityMode },
+        val qualityDescription = stringResource(R.string.capture_quality_level, quality.label)
+        TextButton(
+            onClick = { quality = quality.next() },
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .statusBarsPadding()
-                .padding(8.dp),
+                .padding(8.dp)
+                .semantics { contentDescription = qualityDescription },
         ) {
-            Icon(
-                if (qualityMode) Icons.Outlined.HighQuality else Icons.Outlined.Bolt,
-                contentDescription = stringResource(
-                    if (qualityMode) R.string.capture_quality else R.string.capture_speed,
-                ),
-                tint = Color.White,
-            )
+            Text(text = quality.label, color = Color.White, fontWeight = FontWeight.Bold)
         }
 
         Row(

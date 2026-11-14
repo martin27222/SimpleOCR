@@ -55,7 +55,7 @@ class MlKitOcrEngine : OcrEngine {
             )
         }.filter { it.text.isNotBlank() }
 
-        OcrResultMapper.fromBlocks(blocks)
+        OcrResultMapper.fromBlocks(blocks).arranged()
     }
 
     /**

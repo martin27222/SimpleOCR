@@ -38,6 +38,8 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
@@ -76,6 +78,12 @@ class EditorViewModel(
 
     private var multiPhotoSession = MultiPhotoSession()
 
+    /**
+     * Lets only one photo be read at a time. Reading holds several full-size images in memory;
+     * photos taken in quick succession would otherwise add up.
+     */
+    private val readingTurn = Mutex()
+
     fun updateSettings(settings: AppSettings) {
         _settings.value = settings
         settingsStore.save(settings)
@@ -88,7 +96,7 @@ class EditorViewModel(
     }
 
     /** Shows a photo taken with the in-app camera. The bitmap only lives in memory. */
-    fun openCapturedPhoto(bitmap: Bitmap) {
+    fun openCapturedPhoto(bitmap: Bitmap, passes: Int) {
         forgetVariants()
         ocrRepository.clear()
         _uiState.update {
@@ -103,7 +111,7 @@ class EditorViewModel(
             )
         }
         autoSave(bitmap)
-        readPhoto(bitmap)
+        readPhoto(bitmap, passes)
     }
 
     fun setCaptureMode(mode: CaptureMode) {
@@ -113,16 +121,16 @@ class EditorViewModel(
     }
 
     /** Reads one more photo of the object. The photo itself is not kept. */
-    fun addMultiPhoto(bitmap: Bitmap) {
+    fun addMultiPhoto(bitmap: Bitmap, passes: Int) {
         val session = multiPhotoSession
         val index = session.readings.size
         session.readings.add(null)
         _uiState.update { it.copy(multiPhotoCount = session.readings.size) }
         autoSave(bitmap)
         val language = _uiState.value.language
-        val flatten = _settings.value.autoDewarp
+        val flatten = _settings.value.autoDewarp && passes >= 2
         session.jobs += viewModelScope.launch {
-            catching { readForMerging(bitmap, language, flatten) }
+            catching { readingTurn.withLock { readForMerging(bitmap, language, flatten) } }
                 .onSuccess { session.readings[index] = it }
                 .onFailure { throwable ->
                     _uiState.update { it.copy(errorMessage = throwable.message ?: "OCR failed") }
@@ -218,7 +226,7 @@ class EditorViewModel(
                             lastSavedUri = null,
                         )
                     }
-                    if (openedExternally) runOcr(force = true) else readPhoto(bitmap)
+                    if (openedExternally) runOcr(force = true) else readPhoto(bitmap, _settings.value.run { level(quality).passes })
                 }
                 .onFailure { throwable ->
                     _uiState.update {
@@ -315,67 +323,76 @@ class EditorViewModel(
     }
 
     /**
-     * Reads a photo in two steps so text shows up as fast as possible:
+     * Reads a photo in steps so text shows up as fast as possible:
      *  1. recognize the photo as taken and show that at once;
-     *  2. flatten the photo in two ways, recognize both and switch to the best one if it reads
+     *  2. flatten the photo, recognize it again and switch to the flattened version if it reads
      *     clearly better than the photo as taken;
      *  3. correct single words by comparing all readings.
+     *
+     * [passes] sets how much of this happens: 1 stops after step 1, 2 flattens with the help of
+     * the text, 3 also tries the UVDoc network and takes the better of both.
      */
-    private fun readPhoto(bitmap: Bitmap) {
+    private fun readPhoto(bitmap: Bitmap, passes: Int) {
         val language = _uiState.value.language
-        val autoDewarp = _settings.value.autoDewarp
+        val autoDewarp = _settings.value.autoDewarp && passes >= 2
         photoJob = viewModelScope.launch {
-            _uiState.update { it.copy(isRunningOcr = true, errorMessage = null) }
-            val originalOcr = catching { ocrEngine.recognize(bitmap, language) }
-                .getOrElse { throwable ->
-                    _uiState.update {
-                        it.copy(isRunningOcr = false, errorMessage = throwable.message ?: "OCR failed")
-                    }
-                    return@launch
-                }
-            val original = Variant(bitmap, originalOcr)
-            originalVariant = original
-            _uiState.update {
-                it.copy(ocrResult = originalOcr, isRunningOcr = false, isDewarping = autoDewarp)
-            }
+            readingTurn.withLock { readPhoto(bitmap, language, autoDewarp, withNetwork = passes >= 3) }
+        }
+    }
 
-            // Two ways of flattening compete: one guided by the text just read, one by the UVDoc
-            // network. A failed flattening is not an error for the user: the other readings stay.
-            val flattened = ArrayList<Variant>()
-            if (autoDewarp) {
-                catching {
-                    TextGuidedFlattener.flatten(bitmap, originalOcr)
-                        ?.let { Variant(it, ocrEngine.recognize(it, language)) }
-                }.getOrNull()?.let(flattened::add)
+    private suspend fun readPhoto(bitmap: Bitmap, language: OcrLanguage, autoDewarp: Boolean, withNetwork: Boolean) {
+        _uiState.update { it.copy(isRunningOcr = true, errorMessage = null) }
+        val originalOcr = catching { ocrEngine.recognize(bitmap, language) }
+            .getOrElse { throwable ->
+                _uiState.update {
+                    it.copy(isRunningOcr = false, errorMessage = throwable.message ?: "OCR failed")
+                }
+                return
+            }
+        val original = Variant(bitmap, originalOcr)
+        originalVariant = original
+        _uiState.update {
+            it.copy(ocrResult = originalOcr, isRunningOcr = false, isDewarping = autoDewarp)
+        }
+
+        // Up to two ways of flattening compete: one guided by the text just read, one by the
+        // UVDoc network. A failed flattening is not an error for the user: the other readings stay.
+        val flattened = ArrayList<Variant>()
+        if (autoDewarp) {
+            catching {
+                TextGuidedFlattener.flatten(bitmap, originalOcr)
+                    ?.let { Variant(it, ocrEngine.recognize(it, language)) }
+            }.getOrNull()?.let(flattened::add)
+            if (withNetwork) {
                 catching {
                     val flat = dewarper.dewarp(bitmap)
                     Variant(flat, ocrEngine.recognize(flat, language))
                 }.getOrNull()?.let(flattened::add)
             }
-            val bestFlat = flattened.maxByOrNull { it.ocr.qualityScore }
-            val showDewarped = bestFlat != null && DewarpChoice.preferDewarped(
-                originalScore = originalOcr.qualityScore,
-                dewarpedScore = bestFlat.ocr.qualityScore,
-            )
-            // Each version is then corrected word by word with what the other versions read.
-            val readings = listOf(originalOcr) + flattened.map { it.ocr }
-            val votedOriginal = original.copy(ocr = originalOcr.votedWith(readings - originalOcr))
-            val votedFlat = bestFlat?.let { best -> best.copy(ocr = best.ocr.votedWith(readings - best.ocr)) }
-            originalVariant = votedOriginal
-            dewarpedVariant = votedFlat
-            val shown = if (showDewarped && votedFlat != null) votedFlat else votedOriginal
-            _uiState.update {
-                it.copy(
-                    bitmap = shown.bitmap,
-                    ocrResult = shown.ocr,
-                    isDewarping = false,
-                    canToggleDewarp = votedFlat != null,
-                    showingDewarped = showDewarped,
-                )
-            }
-            val settings = _settings.value
-            if (settings.autoCopy) copyToClipboard(shown.ocr.textToCopy(settings))
         }
+        val bestFlat = flattened.maxByOrNull { it.ocr.qualityScore }
+        val showDewarped = bestFlat != null && DewarpChoice.preferDewarped(
+            originalScore = originalOcr.qualityScore,
+            dewarpedScore = bestFlat.ocr.qualityScore,
+        )
+        // Each version is then corrected word by word with what the other versions read.
+        val readings = listOf(originalOcr) + flattened.map { it.ocr }
+        val votedOriginal = original.copy(ocr = originalOcr.votedWith(readings - originalOcr))
+        val votedFlat = bestFlat?.let { best -> best.copy(ocr = best.ocr.votedWith(readings - best.ocr)) }
+        originalVariant = votedOriginal
+        dewarpedVariant = votedFlat
+        val shown = if (showDewarped && votedFlat != null) votedFlat else votedOriginal
+        _uiState.update {
+            it.copy(
+                bitmap = shown.bitmap,
+                ocrResult = shown.ocr,
+                isDewarping = false,
+                canToggleDewarp = votedFlat != null,
+                showingDewarped = showDewarped,
+            )
+        }
+        val settings = _settings.value
+        if (settings.autoCopy) copyToClipboard(shown.ocr.textToCopy(settings))
     }
 
     private fun autoSave(bitmap: Bitmap) {

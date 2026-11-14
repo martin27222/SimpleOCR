@@ -7,11 +7,8 @@ import kotlin.math.max
 
 /** Turns a CameraX capture into an upright bitmap that is small enough for fast OCR. */
 object CapturedPhoto {
-    /** Speed mode. Same limit as images opened from other apps, so both paths behave alike. */
+    /** The limit when no quality level is given; also used for images opened from other apps. */
     const val MAX_SIDE_PX = 3000
-
-    /** Quality mode: keeps a 12 megapixel photo (4080 x 3072) at full size. */
-    const val QUALITY_MAX_SIDE_PX = 4096
 
     fun toUprightBitmap(image: ImageProxy, maxSide: Int = MAX_SIDE_PX): Bitmap {
         val raw = image.toBitmap()
