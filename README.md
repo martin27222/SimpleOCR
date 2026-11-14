@@ -111,6 +111,7 @@ The app works without touching any setting.
 | Copy text automatically after a photo | off |
 | Save every photo to the gallery | off |
 | Light on at start | off |
+| Lock orientation (photos always upright) | off |
 | Quality level at start | SQ |
 
 The button at the top left of the camera switches between three quality levels. Photo size and number of reading passes can be changed per level in the settings.

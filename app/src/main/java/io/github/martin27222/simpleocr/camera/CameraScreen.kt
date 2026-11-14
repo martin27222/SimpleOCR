@@ -1,8 +1,14 @@
 package io.github.martin27222.simpleocr.camera
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.view.OrientationEventListener
+import android.view.Surface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.Camera
@@ -15,6 +21,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.lifecycle.awaitInstance
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,6 +45,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FlashlightOff
 import androidx.compose.material.icons.outlined.FlashlightOn
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Panorama
+import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Settings
@@ -47,10 +56,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -59,17 +71,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.material3.TextButton
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import io.github.martin27222.simpleocr.settings.Quality
-import io.github.martin27222.simpleocr.settings.QualityLevel
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -78,6 +89,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.martin27222.simpleocr.CaptureMode
 import io.github.martin27222.simpleocr.R
+import io.github.martin27222.simpleocr.settings.Quality
+import io.github.martin27222.simpleocr.settings.QualityLevel
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -93,6 +106,8 @@ fun CameraScreen(
     multiPhotoCount: Int,
     isMergingPhotos: Boolean,
     lightOnAtStart: Boolean,
+    /** Photos are always taken upright and the symbols do not turn with the phone. */
+    lockOrientation: Boolean,
     defaultQuality: Quality,
     levelOf: (Quality) -> QualityLevel,
     onModeSelected: (CaptureMode) -> Unit,
@@ -131,6 +146,7 @@ fun CameraScreen(
                 multiPhotoCount = multiPhotoCount,
                 isMergingPhotos = isMergingPhotos,
                 lightOnAtStart = lightOnAtStart,
+                lockOrientation = lockOrientation,
                 defaultQuality = defaultQuality,
                 levelOf = levelOf,
                 onModeSelected = onModeSelected,
@@ -158,6 +174,8 @@ private fun CameraContent(
     multiPhotoCount: Int,
     isMergingPhotos: Boolean,
     lightOnAtStart: Boolean,
+    /** Photos are always taken upright and the symbols do not turn with the phone. */
+    lockOrientation: Boolean,
     defaultQuality: Quality,
     levelOf: (Quality) -> QualityLevel,
     onModeSelected: (CaptureMode) -> Unit,
@@ -199,6 +217,41 @@ private fun CameraContent(
     var camera by remember { mutableStateOf<Camera?>(null) }
     var torchOn by rememberSaveable { mutableStateOf(lightOnAtStart) }
     var isCapturing by remember { mutableStateOf(false) }
+
+    // The way the phone is held, from the motion sensor: photos are taken that way round and
+    // the symbols turn to stay upright.
+    var rotation by remember { mutableIntStateOf(Surface.ROTATION_0) }
+    DisposableEffect(lockOrientation) {
+        if (lockOrientation) {
+            rotation = Surface.ROTATION_0
+            return@DisposableEffect onDispose {}
+        }
+        val listener = object : OrientationEventListener(context) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+                rotation = DeviceRotation.fromOrientation(orientation, rotation)
+            }
+        }
+        listener.enable()
+        onDispose { listener.disable() }
+    }
+    // The screen itself stays upright, so the camera picture does not jump when the phone turns.
+    DisposableEffect(Unit) {
+        val activity = context.findActivity()
+        val before = activity?.requestedOrientation
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        onDispose { if (before != null) activity.requestedOrientation = before }
+    }
+    LaunchedEffect(rotation, imageCapture) { imageCapture.targetRotation = rotation }
+    // Turned the short way round, so 270 degrees become -90.
+    var symbolTarget by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(rotation) {
+        val wanted = DeviceRotation.symbolAngle(rotation)
+        val step = ((wanted - symbolTarget) % 360f + 540f) % 360f - 180f
+        symbolTarget += step
+    }
+    val symbolAngle by animateFloatAsState(symbolTarget, label = "symbolAngle")
+    val upright = Modifier.rotate(symbolAngle)
 
     LaunchedEffect(lifecycleOwner, imageCapture) {
         runCatching {
@@ -288,7 +341,7 @@ private fun CameraContent(
                 .padding(8.dp)
                 .semantics { contentDescription = qualityDescription },
         ) {
-            Text(text = quality.label, color = Color.White, fontWeight = FontWeight.Bold)
+            Text(text = quality.label, color = Color.White, fontWeight = FontWeight.Bold, modifier = upright)
         }
 
         Row(
@@ -302,6 +355,7 @@ private fun CameraContent(
                     Icons.Outlined.Settings,
                     contentDescription = stringResource(R.string.settings),
                     tint = Color.White,
+                    modifier = upright,
                 )
             }
             IconButton(onClick = onShowPrivacy) {
@@ -309,6 +363,7 @@ private fun CameraContent(
                     Icons.Outlined.Info,
                     contentDescription = stringResource(R.string.privacy),
                     tint = Color.White,
+                    modifier = upright,
                 )
             }
         }
@@ -343,6 +398,7 @@ private fun CameraContent(
                             Icons.Outlined.RestartAlt,
                             contentDescription = stringResource(R.string.multi_photo_reset),
                             tint = if (canReset) Color.White else Color.Gray,
+                            modifier = upright,
                         )
                     }
                 } else {
@@ -351,6 +407,7 @@ private fun CameraContent(
                             Icons.Outlined.PhotoLibrary,
                             contentDescription = stringResource(R.string.choose_image),
                             tint = Color.White,
+                            modifier = upright,
                         )
                     }
                 }
@@ -363,11 +420,12 @@ private fun CameraContent(
                         if (torchOn) Icons.Outlined.FlashlightOn else Icons.Outlined.FlashlightOff,
                         contentDescription = stringResource(R.string.toggle_light),
                         tint = if (hasTorch) Color.White else Color.Gray,
+                        modifier = upright,
                     )
                 }
             }
 
-            ModeBar(mode = mode, onModeSelected = onModeSelected)
+            ModeBar(mode = mode, onModeSelected = onModeSelected, symbolModifier = upright)
         }
     }
 }
@@ -402,24 +460,29 @@ private fun MultiPhotoStatus(
     }
 }
 
-/** The two things the shutter can do. */
+/** The two things the shutter can do: one photo, or several photos of one object. */
 @Composable
 private fun ModeBar(
     mode: CaptureMode,
     onModeSelected: (CaptureMode) -> Unit,
+    symbolModifier: Modifier,
 ) {
     Row(
         modifier = Modifier.selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         ModeTab(
+            icon = Icons.Outlined.PhotoCamera,
             label = stringResource(R.string.mode_photo),
             selected = mode == CaptureMode.Photo,
+            symbolModifier = symbolModifier,
             onClick = { onModeSelected(CaptureMode.Photo) },
         )
         ModeTab(
+            icon = Icons.Outlined.Panorama,
             label = stringResource(R.string.mode_multi_photo),
             selected = mode == CaptureMode.MultiPhoto,
+            symbolModifier = symbolModifier,
             onClick = { onModeSelected(CaptureMode.MultiPhoto) },
         )
     }
@@ -427,20 +490,26 @@ private fun ModeBar(
 
 @Composable
 private fun ModeTab(
+    icon: ImageVector,
     label: String,
     selected: Boolean,
+    symbolModifier: Modifier,
     onClick: () -> Unit,
 ) {
-    Text(
-        text = label,
-        color = if (selected) Color.Black else Color.White,
-        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+    Box(
         modifier = Modifier
             .clip(CircleShape)
             .background(if (selected) Color.White else Color.Black.copy(alpha = 0.55f))
             .selectable(selected = selected, role = Role.Tab, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-    )
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+    ) {
+        Icon(
+            icon,
+            contentDescription = label,
+            tint = if (selected) Color.Black else Color.White,
+            modifier = symbolModifier,
+        )
+    }
 }
 
 @Composable
@@ -498,4 +567,10 @@ private fun PermissionHint(
             Text(stringResource(R.string.choose_image))
         }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

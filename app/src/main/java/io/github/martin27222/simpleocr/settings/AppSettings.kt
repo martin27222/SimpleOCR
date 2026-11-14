@@ -17,6 +17,8 @@ data class AppSettings(
     val autoSavePhotos: Boolean = false,
     /** Switch the light on when the camera opens. */
     val lightOnAtStart: Boolean = false,
+    /** Keep the camera in portrait instead of following how the phone is held. */
+    val lockOrientation: Boolean = false,
     /** The quality level the camera starts with. */
     val quality: Quality = Quality.Standard,
     /** What each quality level does. */
@@ -38,6 +40,7 @@ class SettingsStore(context: Context) {
             autoCopy = preferences.getBoolean(AUTO_COPY, defaults.autoCopy),
             autoSavePhotos = preferences.getBoolean(AUTO_SAVE, defaults.autoSavePhotos),
             lightOnAtStart = preferences.getBoolean(LIGHT_ON, defaults.lightOnAtStart),
+            lockOrientation = preferences.getBoolean(LOCK_ORIENTATION, defaults.lockOrientation),
             quality = loadQuality(defaults.quality),
             levels = Quality.entries.associateWith { quality ->
                 QualityLevel(
@@ -56,6 +59,7 @@ class SettingsStore(context: Context) {
             putBoolean(AUTO_COPY, settings.autoCopy)
             putBoolean(AUTO_SAVE, settings.autoSavePhotos)
             putBoolean(LIGHT_ON, settings.lightOnAtStart)
+            putBoolean(LOCK_ORIENTATION, settings.lockOrientation)
             putString(QUALITY, settings.quality.name)
             for (quality in Quality.entries) {
                 putInt(sideKey(quality), settings.level(quality).maxSide)
@@ -82,6 +86,7 @@ class SettingsStore(context: Context) {
         const val AUTO_COPY = "auto_copy"
         const val AUTO_SAVE = "auto_save_photos"
         const val LIGHT_ON = "light_on_at_start"
+        const val LOCK_ORIENTATION = "lock_orientation"
         const val QUALITY = "quality"
         const val OLD_QUALITY_CAPTURE = "quality_capture"
     }

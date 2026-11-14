@@ -34,3 +34,5 @@
 ## EasyOCR history
 
 Changes before the fork are listed in the [EasyOCR changelog](https://github.com/MosesEllermann/EasyOCR/blob/main/CHANGELOG.md).
+- Holding the phone sideways takes the photo sideways; the camera's symbols turn as a sign. Works with the system's auto-rotate off. A setting locks it to upright.
+- Single and multiple photos are chosen with two symbols instead of words.

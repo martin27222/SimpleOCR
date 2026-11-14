@@ -126,6 +126,7 @@ class MainActivity : ComponentActivity() {
                         multiPhotoCount = state.multiPhotoCount,
                         isMergingPhotos = state.isMergingPhotos,
                         lightOnAtStart = settings.lightOnAtStart,
+                        lockOrientation = settings.lockOrientation,
                         defaultQuality = settings.quality,
                         levelOf = settings::level,
                         onModeSelected = viewModel::setCaptureMode,
