@@ -144,4 +144,4 @@ simpleocr.release.keyPassword=...
 
 SimpleOCR is a fork of [EasyOCR](https://github.com/MosesEllermann/EasyOCR) by Moses Ellermann, a privacy-first screenshot OCR editor. It keeps EasyOCR's on-device recognition and text selection and adds what is needed for photographing real objects.
 
-Open source under the Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Open source under the Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). The app lists the licenses of all libraries it ships with under Settings, "Open-source licenses". All of them allow use in this app; ML Kit is the only one that is not open source.
