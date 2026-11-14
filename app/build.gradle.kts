@@ -21,8 +21,11 @@ android {
         applicationId = "io.github.martin27222.simpleocr"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // CI passes its run number, so every build has a higher version and update apps such
+        // as Obtainium see it as new.
+        val buildNumber = providers.environmentVariable("BUILD_NUMBER").orNull?.toIntOrNull() ?: 1
+        versionCode = buildNumber
+        versionName = "0.1.$buildNumber"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

@@ -28,21 +28,24 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
 
       - name: Test and build the debug APK
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
         run: ./gradlew --no-daemon test assembleDebug assembleRelease
 
       - name: Name the APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/SimpleOCR-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/SimpleOCR.apk
 
       - uses: actions/upload-artifact@v6
         with:
           name: SimpleOCR-debug-apk
-          path: dist/SimpleOCR-debug.apk
+          path: dist/SimpleOCR.apk
           if-no-files-found: error
 
   publish-dev-build:
-    # Keeps one always-current prerelease so the APK has a direct download link.
+    # Every build of main becomes the latest release, so the APK has a fixed download link
+    # (releases/latest/download/SimpleOCR.apk) and Obtainium sees each build as an update.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
@@ -55,14 +58,18 @@ jobs:
           name: SimpleOCR-debug-apk
           path: dist
 
-      - name: Replace the dev-latest prerelease
+      - name: Publish the release and keep the three newest
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          VERSION: 0.1.${{ github.run_number }}
         run: |
-          gh release delete dev-latest --cleanup-tag --yes || true
-          gh release create dev-latest dist/SimpleOCR-debug.apk \
-            --prerelease \
+          gh release create "v$VERSION" dist/SimpleOCR.apk \
+            --latest \
             --target "$GITHUB_SHA" \
-            --title "Development build" \
-            --notes "Debug APK built from commit $GITHUB_SHA. Signed with the public debug key, for testing only."
+            --title "SimpleOCR $VERSION" \
+            --notes "Development build from commit $GITHUB_SHA. Signed with the public debug key, for testing only. Changes: see CHANGELOG.md."
+          gh release delete dev-latest --cleanup-tag --yes || true
+          gh release list --limit 100 --json tagName,createdAt \
+            --jq 'map(select(.tagName | startswith("v0.1."))) | sort_by(.createdAt) | reverse | .[3:] | .[].tagName' \
+            | xargs -r -n1 gh release delete --cleanup-tag --yes
