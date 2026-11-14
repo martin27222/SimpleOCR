@@ -38,11 +38,9 @@ German and English text work best. Android 8 or newer, 64-bit phones.
 **Check the download with [AppVerifier](https://github.com/soupslurpr/AppVerifier):** copy this and compare it in AppVerifier.
 
 ```
-io.github.martin27222.simpleocr.debug
-DA:13:70:3C:D8:A2:CF:9A:2E:8C:E4:22:E9:A2:8F:1E:1E:A2:53:A2:E2:3B:FF:24:FA:FE:4C:B5:AE:1A:62:A4
+io.github.martin27222.simpleocr
+66:C3:69:84:32:6B:E2:62:34:E7:97:2C:FB:A4:E3:17:63:38:05:16:7F:6E:A8:BB:BD:35:9C:EF:58:3A:A2:5E
 ```
-
-> The current builds are development builds, signed with a debug key that is public in this repository. The check above proves the APK was built from this repository's setup, but anyone could sign an APK with the same key. Only install builds from this page.
 
 ## Status
 
@@ -125,7 +123,7 @@ Requirements: JDK 17 and Android SDK Platform 36.
 ./gradlew test assembleDebug
 ```
 
-Every push to `main` publishes a numbered release with the debug APK. Pull requests attach their APK as a workflow artifact.
+Every push to `main` publishes a numbered release, signed with the project's private release key (repository secrets `SIMPLEOCR_KEYSTORE_BASE64` and `SIMPLEOCR_KEYSTORE_PASSWORD`). Pull requests attach their APKs as workflow artifacts.
 
 For a signed release build, configure a private keystore through `local.properties`:
 
