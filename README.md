@@ -76,7 +76,7 @@ Images and text stay on the phone. SimpleOCR has no internet permission (it even
 
 ### Flattening curved pages
 
-SimpleOCR first reads the photo as taken, so text shows up at once. It then flattens the photo in up to two ways, reads the results and switches to the best one only if it reads clearly better. A button swaps between the photo and its flattened version.
+SimpleOCR first reads the photo as taken, so text shows up at once. It then flattens the photo in up to two ways, reads the results and shows the best flattened version, unless it reads clearly worse than the photo as taken. A button swaps between the photo and its flattened version.
 
 | Method | How it works |
 | --- | --- |
@@ -112,7 +112,7 @@ The app works without touching any setting.
 | Save every photo to the gallery | off |
 | Light on at start | off |
 | Lock orientation (photos always upright) | off |
-| Quality level at start | SQ |
+| Quality level at start | HQ |
 
 The button at the top left of the camera switches between three quality levels. Photo size and number of reading passes can be changed per level in the settings.
 

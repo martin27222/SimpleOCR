@@ -32,6 +32,10 @@
 - Paragraphs are measured inside each area of text with its own line spacing, so a side note in smaller type keeps its lines together.
 - Holding the phone sideways takes the photo sideways; the camera's symbols turn as a sign. Works with the system's auto-rotate off. A setting locks it to upright.
 - Single and multiple photos are chosen with two symbols instead of words.
+- Fixed: the app could close by itself right after opening or after a photo. Keeping the camera upright made Android rebuild the screen over and over; the screen now turns without being rebuilt.
+- The flattened photo is shown by default, unless it reads clearly worse; areas of text are found more reliably on it.
+- New installs start with the quality level HQ.
+- The symbol for several photos shows two photos with bent lines of text.
 
 ## EasyOCR history
 
