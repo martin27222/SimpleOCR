@@ -1,5 +1,6 @@
 package io.github.martin27222.simpleocr.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.FilterChip
 import androidx.compose.foundation.layout.Column
@@ -9,12 +10,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -78,7 +88,41 @@ fun SettingsSheet(
                 onCheckedChange = { onChange(settings.copy(lightOnAtStart = it)) },
             )
             QualityRows(settings = settings, onChange = onChange)
+            LicensesRow()
         }
+    }
+}
+
+/** Opens the licenses of SimpleOCR and of the libraries it ships with. */
+@Composable
+private fun LicensesRow() {
+    var open by rememberSaveable { mutableStateOf(false) }
+    Text(
+        text = stringResource(R.string.setting_licenses),
+        style = MaterialTheme.typography.bodyLarge,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { open = true }
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+    )
+    if (open) {
+        val context = LocalContext.current
+        val text = remember {
+            runCatching { context.assets.open("licenses.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
+        }
+        AlertDialog(
+            onDismissRequest = { open = false },
+            confirmButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.close)) } },
+            title = { Text(stringResource(R.string.setting_licenses)) },
+            text = {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            },
+        )
     }
 }
 

@@ -48,4 +48,6 @@
     <string name="setting_quality_start">Level at start</string>
     <string name="setting_quality_size">%1$s photo size (px)</string>
     <string name="setting_quality_passes">%1$s passes</string>
+    <string name="setting_licenses">Open-source licenses</string>
+    <string name="close">Close</string>
 </resources>
