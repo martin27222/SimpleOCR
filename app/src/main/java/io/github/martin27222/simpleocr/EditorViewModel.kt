@@ -158,12 +158,14 @@ class EditorViewModel(
             null
         }
         val useFlat = flat != null && DewarpChoice.preferDewarped(asTaken.qualityScore, flat.ocr.qualityScore)
-        val (reading, height) = if (useFlat) {
-            flat.ocr.votedWith(listOf(asTaken)) to flat.bitmap.height
-        } else {
-            asTaken.votedWith(listOfNotNull(flat?.ocr)) to bitmap.height
+        return withContext(Dispatchers.Default) {
+            val (reading, height) = if (useFlat) {
+                flat.ocr.votedWith(listOf(asTaken)) to flat.bitmap.height
+            } else {
+                asTaken.votedWith(listOfNotNull(flat?.ocr)) to bitmap.height
+            }
+            PhotoReading(reading.readLines(height), reading.placedLines(height))
         }
-        return PhotoReading(reading.readLines(height), reading.placedLines(height))
     }
 
     /** Joins the text of all photos taken so far and shows it. */
@@ -393,9 +395,13 @@ class EditorViewModel(
             dewarpedScore = bestFlat.ocr.qualityScore,
         )
         // Each version is then corrected word by word with what the other versions read.
+        // Comparing every line with every line takes seconds for a full page, so it runs off the
+        // main thread; on the main thread it froze the app ("not responding").
         val readings = listOf(originalOcr) + flattened.map { it.ocr }
-        val votedOriginal = original.copy(ocr = originalOcr.votedWith(readings - originalOcr))
-        val votedFlat = bestFlat?.let { best -> best.copy(ocr = best.ocr.votedWith(readings - best.ocr)) }
+        val (votedOriginal, votedFlat) = withContext(Dispatchers.Default) {
+            original.copy(ocr = originalOcr.votedWith(readings - originalOcr)) to
+                bestFlat?.let { best -> best.copy(ocr = best.ocr.votedWith(readings - best.ocr)) }
+        }
         originalVariant = votedOriginal
         dewarpedVariant = votedFlat
         val shown = if (showDewarped && votedFlat != null) votedFlat else votedOriginal
