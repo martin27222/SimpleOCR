@@ -36,6 +36,7 @@
 - The flattened photo is shown by default, unless it reads clearly worse; areas of text are found more reliably on it.
 - New installs start with the quality level HQ.
 - The symbol for several photos shows two photos with bent lines of text.
+- Settings, "Last crash" shows why the app last closed by itself, ready to copy for a bug report. It stays on the phone.
 
 ## EasyOCR history
 

@@ -4,9 +4,9 @@
 package io.github.martin27222.simpleocr
 
 import android.Manifest
-import android.graphics.Color
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -27,6 +27,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import io.github.martin27222.simpleocr.camera.CameraScreen
+import io.github.martin27222.simpleocr.diagnostics.CrashReport
 import io.github.martin27222.simpleocr.ocr.textToCopy
 import io.github.martin27222.simpleocr.privacy.PrivacyScreen
 import io.github.martin27222.simpleocr.settings.SettingsSheet
@@ -39,6 +40,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashReport.install(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
