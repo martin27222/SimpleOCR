@@ -39,6 +39,8 @@
     <string name="setting_auto_save_description">Jedes hier aufgenommene Foto wird auch in der Galerie abgelegt.</string>
     <string name="setting_light_on">Licht beim Start an</string>
     <string name="setting_light_on_description">Das Licht wird eingeschaltet, sobald die Kamera startet.</string>
+    <string name="setting_lock_orientation">Ausrichtung sperren</string>
+    <string name="setting_lock_orientation_description">Fotos werden immer hochkant aufgenommen, egal wie das Handy gehalten wird.</string>
     <string name="privacy_text">Text wird auf diesem Gerät gelesen. Fotos werden nie hochgeladen.\n\nSimpleOCR kann das Internet gar nicht nutzen: Die App fragt diese Berechtigung nicht an. Es gibt keine Werbung, keine Statistik und kein Tracking.\n\nFotos liegen nur im Arbeitsspeicher, solange sie angezeigt werden. Ein Foto wird nur dann in der Galerie gespeichert, wenn der Speichern-Knopf gedrückt wird oder „Jedes Foto speichern“ eingeschaltet ist.</string>
     <string name="copy_frame">Kasten kopieren</string>
     <string name="capture_quality_level">Qualität %1$s. Tippen zum Wechseln</string>

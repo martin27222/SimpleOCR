@@ -9,25 +9,32 @@
   <a href="https://github.com/martin27222/SimpleOCR/releases/latest/download/SimpleOCR.apk"><img src="https://img.shields.io/badge/Download-APK-0E6B63?style=for-the-badge" alt="Download the APK"></a>
 </p>
 
-A recipe in a cookbook, the ingredients on a bottle, a page of a letter: take a photo, and the text is ready to paste into your notes. Free, open source, no account, no ads, works in flight mode.
+Built for one job: getting text out of a photo as accurately as possible. Take the photo in the app or pick one from the gallery, then copy the text. Free, open source, no account, no ads, works in flight mode.
 
 ## What makes it different
 
 | | |
 | --- | --- |
-| **Offline, for real** | The app has no internet permission at all. Text recognition runs on the phone. |
-| **Book pages come out straight** | A photo of an open book has bent lines. SimpleOCR flattens the page before reading it, so words at the curved edge are read too. |
-| **Columns stay apart** | A side box with ingredients is not mixed into the main text. Each area of text gets its own frame, and "Copy frame" copies just that one. |
-| **Labels around a bottle** | Take several photos while turning the bottle. SimpleOCR joins the texts into one and keeps each overlapping word once. |
-| **Clean text to paste** | Words split with a hyphen at the line end are rejoined, and lines flow into paragraphs. Both can be switched off. |
+| **Accurate** | Each photo is read up to three times (as taken and flattened in two ways), and the readings correct each other word by word. |
+| **Offline** | No internet permission at all. Text recognition runs on the phone. |
+| **Keeps the layout** | Columns, side boxes and page numbers stay apart. Copy everything or one box. |
+| **Clean text** | Hyphenated words are rejoined and lines flow into paragraphs, ready to paste. |
+
+## Use cases
+
+| | Situation | What SimpleOCR does |
+| --- | --- | --- |
+| 1 | **An open book**, page bent towards the spine, photographed at an angle | Straightens the bent lines and widens squeezed letters before reading |
+| 2 | **Text wider than one photo**, such as a label around a bottle or a wide page | Take several overlapping photos; they are laid over each other by the positions of their words, so nothing is doubled or lost at the joins |
+| 3 | **A busy page** with a heading, a side column and a page number | Finds each area of text and keeps its lines together, so a side column never ends up between the lines of the main text |
 
 German and English text work best. Android 8 or newer, 64-bit phones.
 
 ## How to use it
 
-1. Open the app and point the camera at the text.
-2. Take the photo. The text shows up after a few seconds.
-3. Tap "Copy all", or tap a frame and "Copy frame". Or select a few words by hand.
+1. Point the camera at the text and take the photo, or open a picture from the gallery.
+2. The text shows up after a few seconds and gets better while the photo is read again.
+3. Tap "Copy all", or tap a box and "Copy frame". Or select a few words by hand.
 
 ## Install
 
@@ -104,6 +111,7 @@ The app works without touching any setting.
 | Copy text automatically after a photo | off |
 | Save every photo to the gallery | off |
 | Light on at start | off |
+| Lock orientation (photos always upright) | off |
 | Quality level at start | SQ |
 
 The button at the top left of the camera switches between three quality levels. Photo size and number of reading passes can be changed per level in the settings.

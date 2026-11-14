@@ -87,6 +87,12 @@ fun SettingsSheet(
                 checked = settings.lightOnAtStart,
                 onCheckedChange = { onChange(settings.copy(lightOnAtStart = it)) },
             )
+            SettingRow(
+                title = stringResource(R.string.setting_lock_orientation),
+                description = stringResource(R.string.setting_lock_orientation_description),
+                checked = settings.lockOrientation,
+                onCheckedChange = { onChange(settings.copy(lockOrientation = it)) },
+            )
             QualityRows(settings = settings, onChange = onChange)
             LicensesRow()
         }

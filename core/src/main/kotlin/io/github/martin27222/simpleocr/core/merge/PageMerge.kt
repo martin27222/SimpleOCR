@@ -67,11 +67,15 @@ object PageMerge {
         return page.map { line -> line.sortedBy { it.left } }
     }
 
+    /** The text of merged lines as paragraphs, area after area; see [frames]. */
+    fun paragraphs(lines: List<List<PlacedWord>>): List<List<String>> = frames(lines).flatten()
+
     /**
-     * The text of merged lines as paragraphs, area by area (see [PageLayout]). An area made of
-     * one or two stray characters, such as a speck read as a letter, is left out.
+     * The text of merged lines by area of text (see [PageLayout]): areas, their paragraphs, their
+     * lines. An area made of one or two stray characters, such as a speck read as a letter, is
+     * left out.
      */
-    fun paragraphs(lines: List<List<PlacedWord>>): List<List<String>> {
+    fun frames(lines: List<List<PlacedWord>>): List<List<List<String>>> {
         val filled = lines.filter { it.isNotEmpty() }.map { line -> line.sortedBy { it.left } }
         val boxes = filled.map { line ->
             LineBox(line.minOf { it.left }, line.minOf { it.top }, line.maxOf { it.right }, line.maxOf { it.bottom })
@@ -79,7 +83,7 @@ object PageMerge {
         val texts = filled.map { line -> line.joinToString(" ") { it.text } }
         return PageLayout.frames(boxes)
             .filter { frame -> frame.lines.sumOf { index -> texts[index].count { !it.isWhitespace() } } > MAX_STRAY_LETTERS }
-            .flatMap { frame -> frame.paragraphs.map { paragraph -> paragraph.map { texts[it] } } }
+            .map { frame -> frame.paragraphs.map { paragraph -> paragraph.map { texts[it] } } }
     }
 
     /** Sorts the words of every line and notes how far each one is from the end of its row. */

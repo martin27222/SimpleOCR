@@ -1,5 +1,9 @@
 package io.github.martin27222.simpleocr.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,11 +40,12 @@ import io.github.martin27222.simpleocr.R
 import io.github.martin27222.simpleocr.clipboard.ClipboardActions
 import kotlinx.coroutines.launch
 
-/** Shows the text joined from several photos: select parts of it or copy all of it. */
+/** Shows the text joined from several photos, one card per area: copy one area or all of them. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MergedTextScreen(
-    text: String,
+    /** The text of each area found, in reading order. */
+    frames: List<String>,
     /** The text was already copied automatically; the user is told once. */
     textCopied: Boolean,
     onTextCopiedShown: () -> Unit,
@@ -51,6 +56,7 @@ fun MergedTextScreen(
     val clipboardActions = ClipboardActions(LocalClipboardManager.current)
     val scope = rememberCoroutineScope()
     val copiedMessage = stringResource(R.string.copied)
+    val allText = remember(frames) { frames.joinToString("\n\n") }
 
     LaunchedEffect(textCopied) {
         if (textCopied) {
@@ -89,31 +95,42 @@ fun MergedTextScreen(
                 .padding(padding)
                 .navigationBarsPadding(),
         ) {
-            Box(
+            // The largest area is the main text; it gets the amber edge of the photo view.
+            val mainFrame = remember(frames) { frames.indices.maxByOrNull { frames[it].length } }
+            Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = SELECTABLE_TEXT_MARGIN, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                if (text.isBlank()) {
+                if (frames.isEmpty()) {
                     Text(
                         text = stringResource(R.string.no_text_found),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = SELECTABLE_TEXT_MARGIN - 16.dp),
                     )
-                } else {
-                    SelectionContainer {
-                        Text(text = text, style = MaterialTheme.typography.bodyLarge)
-                    }
+                }
+                frames.forEachIndexed { index, frameText ->
+                    FrameCard(
+                        text = frameText,
+                        main = frames.size > 1 && index == mainFrame,
+                        onCopy = {
+                            if (clipboardActions.copy(frameText)) {
+                                scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
+                            }
+                        },
+                    )
                 }
             }
             Button(
                 onClick = {
-                    if (clipboardActions.copy(text)) {
+                    if (clipboardActions.copy(allText)) {
                         scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
                     }
                 },
-                enabled = text.isNotBlank(),
+                enabled = allText.isNotBlank(),
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .padding(vertical = 16.dp),
@@ -124,3 +141,32 @@ fun MergedTextScreen(
         }
     }
 }
+
+/** One area of text with its own copy button; the main text has an amber edge. */
+@Composable
+private fun FrameCard(text: String, main: Boolean, onCopy: () -> Unit) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        border = BorderStroke(
+            width = if (main) 2.dp else 1.dp,
+            color = if (main) MAIN_FRAME_COLOR else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            SelectionContainer {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    // Room for the copy button and for a finger at the start of a line.
+                    modifier = Modifier.padding(start = SELECTABLE_TEXT_MARGIN - 16.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
+                )
+            }
+            IconButton(onClick = onCopy, modifier = Modifier.align(Alignment.TopEnd)) {
+                Icon(Icons.Outlined.ContentCopy, contentDescription = stringResource(R.string.copy_frame))
+            }
+        }
+    }
+}
+
+/** The amber of the main text's box on the photo. */
+private val MAIN_FRAME_COLOR = Color(0xFFF59E0B)

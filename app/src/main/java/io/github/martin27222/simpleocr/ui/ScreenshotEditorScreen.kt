@@ -128,12 +128,12 @@ fun ScreenshotEditorScreen(
     var activeTool by remember { mutableStateOf(EditorTool.View) }
     var cropState by remember { mutableStateOf<CropState?>(null) }
     var cropPreview by remember { mutableStateOf(false) }
-    // "Copy frame" copies one area of text. It starts with the largest one, the main text; a tap
-    // on another box chooses that one. With a single frame the button would only repeat "Copy all".
+    // "Copy frame" copies one area of text. It starts with the largest one, the main text, which
+    // stays amber; a tap on another box chooses that one and draws it white, a tap on the main
+    // text goes back. With a single frame the button would only repeat "Copy all".
     val frames = remember(state.ocrResult) { state.ocrResult?.frames.orEmpty() }
-    var selectedFrame by remember(state.ocrResult) {
-        mutableStateOf(frames.takeIf { it.size > 1 }?.maxByOrNull { it.size }?.index)
-    }
+    val mainFrame = remember(frames) { frames.takeIf { it.size > 1 }?.maxByOrNull { it.size }?.index }
+    var selectedFrame by remember(state.ocrResult) { mutableStateOf(mainFrame) }
     val copyFrameText = remember(frames, selectedFrame, frameText) {
         frames.firstOrNull { it.index == selectedFrame }?.let(frameText).orEmpty()
     }
@@ -269,6 +269,7 @@ fun ScreenshotEditorScreen(
                     bitmap = bitmap,
                     ocrResult = state.ocrResult,
                     frames = frames,
+                    mainFrame = mainFrame,
                     selectedFrame = selectedFrame,
                     onFrameSelected = { if (frames.size > 1) selectedFrame = it },
                     overlaysEnabled = state.overlaysEnabled,

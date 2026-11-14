@@ -74,4 +74,14 @@ class PageLayoutTest {
 
         assertEquals(listOf(listOf(0, 2, 1, 3)), frames.map { it.lines })
     }
+
+    @Test
+    fun sideNoteInSmallerTypeKeepsItsLinesTogether() {
+        // An intro in small, widely spaced type (height 14, gaps 32) above the main text (height
+        // 30, gaps 10). Measured by the main text, each intro line would be its own paragraph.
+        val intro = (0 until 4).map { LineBox(200f, it * 46f, 700f, it * 46f + 14f) }
+        val main = (0 until 8).map { LineBox(0f, 300f + it * 40f, 700f, 330f + it * 40f) }
+        val frames = PageLayout.frames(intro + main)
+        assertEquals(listOf(listOf(listOf(0, 1, 2, 3)), listOf((4 until 12).toList())), frames.map { it.paragraphs })
+    }
 }
