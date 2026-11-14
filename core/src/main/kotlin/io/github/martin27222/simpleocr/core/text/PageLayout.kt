@@ -32,7 +32,19 @@ object PageLayout {
     fun frames(lines: List<LineBox>): List<Frame> {
         if (lines.isEmpty()) return emptyList()
         val lineHeight = median(lines.map { it.height })
-        return Cutter(lines, lineHeight).split(lines.indices.toList())
+        return Cutter(lines, lineHeight).split(lines.indices.toList()).map { frame -> withOwnParagraphs(lines, frame) }
+    }
+
+    /**
+     * Cuts a frame into paragraphs again, measured by its own lines. A side note in a smaller or
+     * italic type has other line heights and gaps than the main text; measured by the main text,
+     * every one of its lines would look like a paragraph of its own.
+     */
+    private fun withOwnParagraphs(lines: List<LineBox>, frame: Frame): Frame {
+        val own = frame.lines
+        if (own.size < 2) return frame
+        val cutter = Cutter(lines, median(own.map { lines[it].height }))
+        return Frame(cutter.paragraphs(own))
     }
 
     private class Cutter(private val lines: List<LineBox>, private val lineHeight: Float) {
@@ -71,6 +83,9 @@ object PageLayout {
         }
 
         private class Band(val lines: List<Int>, val gapAbove: Float, val usualGap: Float)
+
+        /** The paragraphs of one frame, each in reading order. */
+        fun paragraphs(frame: List<Int>): List<List<Int>> = bands(frame).map { inReadingOrder(it.lines) }
 
         /** Cuts a region into paragraphs: runs of lines with no wide empty band between them. */
         private fun bands(region: List<Int>): List<Band> {
