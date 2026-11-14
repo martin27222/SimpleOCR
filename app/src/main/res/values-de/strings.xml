@@ -49,6 +49,9 @@
     <string name="setting_quality_start">Stufe beim Start</string>
     <string name="setting_quality_size">%1$s Fotogröße (px)</string>
     <string name="setting_quality_passes">%1$s Durchgänge</string>
+    <string name="setting_crash_report">Letzter Absturz</string>
+    <string name="copy">Kopieren</string>
+    <string name="crash_report_none">Kein Absturz gespeichert.</string>
     <string name="setting_licenses">Open-Source-Lizenzen</string>
     <string name="close">Schließen</string>
 </resources>

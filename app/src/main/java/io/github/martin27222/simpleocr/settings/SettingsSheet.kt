@@ -2,7 +2,6 @@ package io.github.martin27222.simpleocr.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material3.FilterChip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,25 +11,29 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.github.martin27222.simpleocr.R
+import io.github.martin27222.simpleocr.diagnostics.CrashReport
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,8 +97,49 @@ fun SettingsSheet(
                 onCheckedChange = { onChange(settings.copy(lockOrientation = it)) },
             )
             QualityRows(settings = settings, onChange = onChange)
+            CrashReportRow()
             LicensesRow()
         }
+    }
+}
+
+/** Shows why SimpleOCR last ended unexpectedly, and copies it for a bug report. */
+@Composable
+private fun CrashReportRow() {
+    var open by rememberSaveable { mutableStateOf(false) }
+    Text(
+        text = stringResource(R.string.setting_crash_report),
+        style = MaterialTheme.typography.bodyLarge,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { open = true }
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+    )
+    if (open) {
+        val context = LocalContext.current
+        val clipboard = LocalClipboardManager.current
+        val report = remember { CrashReport.latest(context) }
+        AlertDialog(
+            onDismissRequest = { open = false },
+            confirmButton = {
+                if (report != null) {
+                    TextButton(onClick = {
+                        clipboard.setText(AnnotatedString(report))
+                        open = false
+                    }) { Text(stringResource(R.string.copy)) }
+                }
+            },
+            dismissButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.close)) } },
+            title = { Text(stringResource(R.string.setting_crash_report)) },
+            text = {
+                Text(
+                    text = report ?: stringResource(R.string.crash_report_none),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            },
+        )
     }
 }
 

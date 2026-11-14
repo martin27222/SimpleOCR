@@ -65,7 +65,7 @@ Changes are listed in the [CHANGELOG](CHANGELOG.md).
 
 ## Privacy
 
-Images and text stay on the phone. SimpleOCR has no internet permission (it even removes the ones its libraries ask for), no analytics, no crash reporting and no ads. See [PRIVACY.md](PRIVACY.md).
+Images and text stay on the phone. SimpleOCR has no internet permission (it even removes the ones its libraries ask for), no analytics, no crash reporting and no ads. If it crashes, Settings, "Last crash" shows the error to copy and send yourself. See [PRIVACY.md](PRIVACY.md).
 
 <details>
 <summary><b>How it works inside</b></summary>
