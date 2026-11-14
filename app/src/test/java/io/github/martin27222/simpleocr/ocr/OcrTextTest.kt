@@ -51,16 +51,18 @@ class OcrTextTest {
 
     @Test
     fun placedWordsKeepTheirBoxesOrShareTheLineBox() {
+        // Both lines stay clear of the photo edge, which would count them as cut off.
         val withBoxes = RecognizedTextLine(
             text = "Hello world",
-            boundingBox = RectF2(0f, 0f, 110f, 20f),
+            boundingBox = RectF2(0f, 10f, 110f, 30f),
             words = listOf(ReadWord("Hello", 0.9f), ReadWord("world", 0.8f)),
-            wordBoxes = listOf(RectF2(0f, 0f, 50f, 20f), RectF2(60f, 0f, 110f, 20f)),
+            wordBoxes = listOf(RectF2(0f, 10f, 50f, 30f), RectF2(60f, 10f, 110f, 30f)),
         )
-        val withoutBoxes = withBoxes.copy(boundingBox = RectF2(0f, 50f, 120f, 70f), wordBoxes = emptyList())
+        val withoutBoxes = withBoxes.copy(boundingBox = RectF2(0f, 60f, 120f, 80f), wordBoxes = emptyList())
         val placed = OcrResultMapper.fromBlocks(
-            listOf(RecognizedTextBlock("Hello world\nHello world", RectF2(0f, 0f, 120f, 70f), listOf(withBoxes, withoutBoxes))),
+            listOf(RecognizedTextBlock("Hello world\nHello world", RectF2(0f, 10f, 120f, 80f), listOf(withBoxes, withoutBoxes))),
         ).placedLines()
+        assertEquals(2, placed.size)
         assertEquals(60f, placed[0][1].left, 0f)
         // Without boxes the line is shared by letters: 6 of 12 for "Hello" and its space.
         assertEquals(50f, placed[1][0].right, 0.01f)
