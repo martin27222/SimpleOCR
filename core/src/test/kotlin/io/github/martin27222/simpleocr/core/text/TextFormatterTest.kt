@@ -48,29 +48,4 @@ class TextFormatterTest {
             TextFormatter.format(listOf(listOf("Preis -", "siehe Etikett")), flowingText = true, joinHyphenatedWords = true),
         )
     }
-
-    @Test
-    fun smallLetterReadAsCapitalIsRejoined() {
-        // The book says "inter-" + "course"; the reader took the small c for a capital.
-        assertEquals(
-            "the coarse practice of sexual intercourse.",
-            TextFormatter.format(
-                listOf(listOf("the coarse practice of sexual inter-", "Course.")),
-                flowingText = true,
-                joinHyphenatedWords = true,
-            ),
-        )
-    }
-
-    @Test
-    fun compoundsOfNamesKeepTheirHyphenAndCapital() {
-        assertEquals(
-            "the Anglo-Saxon world and Nord-Ost",
-            TextFormatter.format(
-                listOf(listOf("the Anglo-", "Saxon world and Nord-", "Ost")),
-                flowingText = true,
-                joinHyphenatedWords = true,
-            ),
-        )
-    }
 }

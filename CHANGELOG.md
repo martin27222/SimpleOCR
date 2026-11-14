@@ -38,7 +38,6 @@
 - The symbol for several photos shows two photos with bent lines of text.
 - Settings, "Last crash" shows why the app last closed by itself, ready to copy for a bug report. It stays on the phone.
 - Turning, cropping, "Read again" and a new language read the photo in all steps again, flattened and corrected like a new photo; before, they read it only once. Images shared from other apps are read the same way.
-- A word split at a line end is rejoined even when a small c, o, s, u, v, w, x or z was read as a capital ("inter-" + "Course" becomes "intercourse").
 
 ## EasyOCR history
 
