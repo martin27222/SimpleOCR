@@ -35,8 +35,8 @@ data class EditorUiState(
     /** Photos taken so far in the mode for several photos. */
     val multiPhotoCount: Int = 0,
     val isMergingPhotos: Boolean = false,
-    /** The joined lines of several photos; non-null while their text is shown. */
-    val mergedLines: List<String>? = null,
+    /** The joined text of several photos as paragraphs of lines; non-null while it is shown. */
+    val mergedParagraphs: List<List<String>>? = null,
     /** Text was put on the clipboard automatically and the user has not been told yet. */
     val textCopied: Boolean = false,
     val lastSavedUri: Uri? = null,

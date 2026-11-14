@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
                 }
                 var showPrivacy by remember { mutableStateOf(false) }
                 var showSettings by remember { mutableStateOf(false) }
-                val mergedLines = state.mergedLines
+                val mergedParagraphs = state.mergedParagraphs
 
                 // An image opened from another app closes back into that app.
                 BackHandler(enabled = state.hasImage && !state.openedExternally) {
@@ -81,10 +81,10 @@ class MainActivity : ComponentActivity() {
                     viewModel.resetMultiPhoto()
                 }
 
-                if (mergedLines != null) {
+                if (mergedParagraphs != null) {
                     MergedTextScreen(
-                        text = remember(mergedLines, settings) {
-                            EditorViewModel.mergedText(mergedLines, settings)
+                        text = remember(mergedParagraphs, settings) {
+                            EditorViewModel.mergedText(mergedParagraphs, settings)
                         },
                         textCopied = state.textCopied,
                         onTextCopiedShown = viewModel::clearMessage,

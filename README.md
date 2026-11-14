@@ -51,7 +51,7 @@ Early development, tested by its author on a Pixel 9.
 | Read text from a photo or a shared image, copy it | works |
 | Flatten curved book pages | works, tested on a few real photos |
 | Columns and frames, "Copy frame" | new, needs testing on real pages |
-| Several photos of a round object | works on test photos, real photos still mix up words at the joins |
+| Several photos of a round object | rebuilt: photos are laid over each other by word positions, needs testing |
 | Quality levels LQ, SQ, HQ | new, needs testing |
 
 Changes are listed in the [CHANGELOG](CHANGELOG.md).
@@ -84,9 +84,13 @@ Finally the readings correct each other word by word: where they disagree, the s
 
 ### Several photos of a round object
 
-Turn the object a little after each photo, so that about a third of the text is in two photos. SimpleOCR reads every photo and joins the texts line by line: it looks for the stretch of text two lines share and keeps it once. Letters at the edge of a photo are often cut off, so the first half of the shared stretch comes from the photo that shows the start of the line and the second half from the photo that continues it.
+Turn the object a little after each photo, so that about a third of the text is in two photos. SimpleOCR reads every photo and then lays the photos over each other by the positions of their words:
 
-Example: `Aqua, Alcohol Denat., Parf` and `Denat., Parfum, Limonene` become `Aqua, Alcohol Denat., Parfum, Limonene`.
+1. A longer word that two photos both show, such as "mushrooms", is one spot seen twice. From many such spots the app works out how the second photo is shifted, enlarged and turned against the first. Spots that do not fit are words that merely repeat.
+2. Near every word, the spots around it count most, so a page that bends is followed line by line.
+3. Two words that land on the same place are the same printed word. The one further from the edge of its own photo is kept, because words at the edge get cut off. Scraps of cut-off letters between two photos are dropped.
+
+Because the place decides and not the text, a word that repeats in the text ("until ... until") is neither dropped nor doubled. If a photo shares too few words with the others, the texts are joined line by line instead, by looking for the stretch of text two lines share.
 
 ### Settings
 
