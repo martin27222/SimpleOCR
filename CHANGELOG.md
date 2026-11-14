@@ -37,6 +37,7 @@
 - New installs start with the quality level HQ.
 - The symbol for several photos shows two photos with bent lines of text.
 - Settings, "Last crash" shows why the app last closed by itself, ready to copy for a bug report. It stays on the phone.
+- Turning, cropping, "Read again" and a new language read the photo in all steps again, flattened and corrected like a new photo; before, they read it only once. Images shared from other apps are read the same way.
 
 ## EasyOCR history
 
