@@ -40,8 +40,11 @@
     <string name="setting_light_on">Licht beim Start an</string>
     <string name="setting_light_on_description">Das Licht wird eingeschaltet, sobald die Kamera startet.</string>
     <string name="privacy_text">Text wird auf diesem Gerät gelesen. Fotos werden nie hochgeladen.\n\nSimpleOCR kann das Internet gar nicht nutzen: Die App fragt diese Berechtigung nicht an. Es gibt keine Werbung, keine Statistik und kein Tracking.\n\nFotos liegen nur im Arbeitsspeicher, solange sie angezeigt werden. Ein Foto wird nur dann in der Galerie gespeichert, wenn der Speichern-Knopf gedrückt wird oder „Jedes Foto speichern“ eingeschaltet ist.</string>
-    <string name="capture_speed">Tempo-Modus. Tippen für Qualitäts-Modus</string>
-    <string name="capture_quality">Qualitäts-Modus. Tippen für Tempo-Modus</string>
-    <string name="setting_quality_capture">Im Qualitäts-Modus starten</string>
-    <string name="setting_quality_capture_description">Fotos werden sorgfältiger aufgenommen und in voller Größe gelesen. Langsamer. Das Symbol links oben in der Kamera schaltet jederzeit um.</string>
+    <string name="copy_frame">Kasten kopieren</string>
+    <string name="capture_quality_level">Qualität %1$s. Tippen zum Wechseln</string>
+    <string name="setting_quality">Qualitätsstufen</string>
+    <string name="setting_quality_description">Der Knopf links oben in der Kamera schaltet zwischen LQ, SQ und HQ. Jede Stufe hat eine Fotogröße und eine Zahl von Durchgängen. Ein kleineres Foto wird schneller gelesen, ein größeres hilft bei kleiner Schrift. Durchgang 1 liest das Foto wie aufgenommen, Durchgang 2 entzerrt es anhand des Textes, Durchgang 3 entzerrt es mit einem neuronalen Netz. Der Text aus Durchgang 1 erscheint sofort, die weiteren verbessern ihn.</string>
+    <string name="setting_quality_start">Stufe beim Start</string>
+    <string name="setting_quality_size">%1$s Fotogröße (px)</string>
+    <string name="setting_quality_passes">%1$s Durchgänge</string>
 </resources>

@@ -22,6 +22,21 @@ data class OcrResult(
                 (line.text.count { !it.isWhitespace() } * line.confidence).toDouble()
             }
         }.toFloat()
+
+    /** The areas of text on the page, in reading order. */
+    val frames: List<OcrFrame>
+        get() = blocks.groupBy { it.frame }.toSortedMap().map { (index, blocks) -> OcrFrame(index, blocks) }
+}
+
+/**
+ * One connected area of text, such as a column or a side note, made of one or more paragraphs.
+ * The app draws one box around it and can copy it on its own.
+ */
+data class OcrFrame(val index: Int, val blocks: List<OcrTextBlock>) {
+    val boundingBox: RectF2 get() = boundsOf(blocks.map { it.boundingBox })
+
+    /** How many visible characters the frame holds; the largest frame is the main text. */
+    val size: Int get() = blocks.sumOf { block -> block.text.count { !it.isWhitespace() } }
 }
 
 data class OcrTextBlock(
@@ -29,6 +44,8 @@ data class OcrTextBlock(
     val text: String,
     val boundingBox: RectF2,
     val lines: List<OcrTextLine> = emptyList(),
+    /** Which frame of the page the block belongs to, see [OcrFrame]. */
+    val frame: Int = 0,
 )
 
 data class OcrTextLine(

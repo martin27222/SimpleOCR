@@ -94,7 +94,7 @@ fun MergedTextScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .padding(horizontal = SELECTABLE_TEXT_MARGIN, vertical = 12.dp),
             ) {
                 if (text.isBlank()) {
                     Text(

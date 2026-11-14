@@ -16,6 +16,10 @@
 - The readings of a photo and its flattened versions correct each other word by word.
 - The camera has a speed mode and a quality mode.
 - Joining several photos handles lines that lie inside another line, letters cut off at photo edges and flat pages photographed in parts.
+- The app finds columns and separate areas of text itself. A side column is no longer mixed into the main text, and "Copy frame" copies one area on its own.
+- Three quality levels (LQ, SQ, HQ) replace the speed and quality modes. Photo size and reading passes of each level can be set.
+- Wider side margins around text that can be selected.
+- Photos are read one after the other to use less memory.
 
 ## EasyOCR history
 

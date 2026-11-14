@@ -3,6 +3,10 @@
 
 package io.github.martin27222.simpleocr.ui
 
+import io.github.martin27222.simpleocr.ocr.OcrFrame
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import androidx.compose.foundation.Canvas
@@ -64,6 +68,11 @@ import kotlin.math.roundToInt
 fun ImageCanvasWithOcrOverlay(
     bitmap: Bitmap,
     ocrResult: OcrResult?,
+    /** The frames of [ocrResult]; one box is drawn around each. */
+    frames: List<OcrFrame>,
+    /** The frame that "Copy frame" copies, drawn more strongly; null draws all boxes alike. */
+    selectedFrame: Int?,
+    onFrameSelected: (Int) -> Unit,
     overlaysEnabled: Boolean,
     transform: ImageTransform,
     viewportSize: SizeF2,
@@ -88,6 +97,7 @@ fun ImageCanvasWithOcrOverlay(
     var magnifierPoint by remember { mutableStateOf<Offset?>(null) }
     val latestCropState by rememberUpdatedState(cropState)
     val latestTransform by rememberUpdatedState(transform)
+    val latestFrames by rememberUpdatedState(frames)
     val documentPreviewProgress by animateFloatAsState(
         targetValue = if (cropPreview && cropState?.preset == CropPreset.Document) 1f else 0f,
         animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
@@ -109,6 +119,19 @@ fun ImageCanvasWithOcrOverlay(
             .background(Color(0xFF0F172A))
             .onSizeChanged {
                 onViewportChanged(SizeF2(it.width.toFloat(), it.height.toFloat()))
+            }
+            .tapGestures(enabled = activeTool == EditorTool.View && overlaysEnabled) { offset ->
+                val point = OcrCoordinateMapper.screenToImagePoint(
+                    screenPoint = PointF2(offset.x, offset.y),
+                    imageSize = imageSize,
+                    viewportSize = viewportSize,
+                    transform = latestTransform,
+                )
+                // Frames can lie inside each other's boxes; the smallest one under the finger wins.
+                latestFrames
+                    .filter { it.boundingBox.contains(point) }
+                    .minByOrNull { it.boundingBox.width * it.boundingBox.height }
+                    ?.let { onFrameSelected(it.index) }
             }
             .viewGestures(
                 enabled = activeTool == EditorTool.View,
@@ -166,14 +189,14 @@ fun ImageCanvasWithOcrOverlay(
             }
 
             if (overlaysEnabled && activeTool == EditorTool.View) {
-                ocrResult?.blocks.orEmpty().forEach { block ->
+                frames.forEach { frame ->
                     val rect = OcrCoordinateMapper.imageToScreenRect(
-                        imageRect = block.boundingBox,
+                        imageRect = frame.boundingBox,
                         imageSize = imageSize,
                         viewportSize = viewportSize,
                         transform = transform,
                     )
-                    drawRoundedOverlay(rect)
+                    drawRoundedOverlay(rect, selected = frame.index == selectedFrame)
                 }
             }
 
@@ -225,6 +248,37 @@ fun ImageCanvasWithOcrOverlay(
                 viewportSize = viewportSize,
                 transform = transform,
             )
+        }
+    }
+}
+
+/**
+ * Reports a short tap without taking it away from anything else: the text on top can still be
+ * selected with a long press, and dragging or pinching still moves the image.
+ */
+private fun Modifier.tapGestures(
+    enabled: Boolean,
+    onTap: (Offset) -> Unit,
+): Modifier {
+    if (!enabled) return this
+    return pointerInput(Unit) {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            var isTap = true
+            var position = down.position
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val change = event.changes.first()
+                position = change.position
+                if (event.changes.size > 1 ||
+                    (position - down.position).getDistance() > viewConfiguration.touchSlop ||
+                    change.uptimeMillis - down.uptimeMillis > viewConfiguration.longPressTimeoutMillis
+                ) {
+                    isTap = false
+                }
+                if (event.changes.none { it.pressed }) break
+            }
+            if (isTap) onTap(position)
         }
     }
 }
@@ -653,22 +707,22 @@ private fun RectF2.moveInside(imageSize: SizeF2): RectF2 {
     return RectF2(left, top, left + width, top + height)
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRoundedOverlay(rect: RectF2) {
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRoundedOverlay(rect: RectF2, selected: Boolean) {
     val topLeft = Offset(rect.left, rect.top)
     val size = Size(rect.width, rect.height)
     val radius = CornerRadius(8f, 8f)
     drawRoundRect(
-        color = Color(0x3332C7B7),
+        color = if (selected) Color(0x4DF59E0B) else Color(0x3332C7B7),
         topLeft = topLeft,
         size = size,
         cornerRadius = radius,
     )
     drawRoundRect(
-        color = Color(0xCC14B8A6),
+        color = if (selected) Color(0xFFF59E0B) else Color(0xCC14B8A6),
         topLeft = topLeft,
         size = size,
         cornerRadius = radius,
-        style = Stroke(width = 2f),
+        style = Stroke(width = if (selected) 5f else 2f),
     )
 }
 

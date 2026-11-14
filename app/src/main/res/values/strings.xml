@@ -41,8 +41,11 @@
     <string name="setting_light_on">Light on at start</string>
     <string name="setting_light_on_description">The light is switched on when the camera opens.</string>
     <string name="privacy_text">Text is read on this device. Photos are never uploaded.\n\nSimpleOCR cannot use the internet at all: it does not ask for that permission. There are no ads, no statistics and no tracking.\n\nPhotos only stay in memory while they are shown. A photo is stored in the gallery only when the save button is pressed or \"Save every photo\" is switched on.</string>
-    <string name="capture_speed">Speed mode. Tap for quality mode</string>
-    <string name="capture_quality">Quality mode. Tap for speed mode</string>
-    <string name="setting_quality_capture">Start in quality mode</string>
-    <string name="setting_quality_capture_description">Photos are taken with more care and kept at full size. Slower. The symbol at the top left of the camera switches at any time.</string>
+    <string name="copy_frame">Copy frame</string>
+    <string name="capture_quality_level">Quality %1$s. Tap to change</string>
+    <string name="setting_quality">Quality levels</string>
+    <string name="setting_quality_description">The button at the top left of the camera switches between LQ, SQ and HQ. Each level has a photo size and a number of reading passes. A smaller photo reads faster, a larger one helps with small print. Pass 1 reads the photo as taken, pass 2 flattens it with the help of the text, pass 3 flattens it with a neural network. The text of pass 1 shows at once, later passes improve it.</string>
+    <string name="setting_quality_start">Level at start</string>
+    <string name="setting_quality_size">%1$s photo size (px)</string>
+    <string name="setting_quality_passes">%1$s passes</string>
 </resources>

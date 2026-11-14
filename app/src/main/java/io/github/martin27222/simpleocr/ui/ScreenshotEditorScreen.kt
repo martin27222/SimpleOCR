@@ -3,6 +3,9 @@
 
 package io.github.martin27222.simpleocr.ui
 
+import io.github.martin27222.simpleocr.ocr.OcrFrame
+import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -97,6 +100,8 @@ fun ScreenshotEditorScreen(
     state: EditorUiState,
     /** The text that "Copy all" copies, already formatted the way the user set it. */
     copyAllText: String,
+    /** The text of one frame, formatted the same way. */
+    frameText: (OcrFrame) -> String,
     onShowSettings: () -> Unit,
     onOpenPicker: () -> Unit,
     onToggleOverlays: () -> Unit,
@@ -123,6 +128,15 @@ fun ScreenshotEditorScreen(
     var activeTool by remember { mutableStateOf(EditorTool.View) }
     var cropState by remember { mutableStateOf<CropState?>(null) }
     var cropPreview by remember { mutableStateOf(false) }
+    // "Copy frame" copies one area of text. It starts with the largest one, the main text; a tap
+    // on another box chooses that one. With a single frame the button would only repeat "Copy all".
+    val frames = remember(state.ocrResult) { state.ocrResult?.frames.orEmpty() }
+    var selectedFrame by remember(state.ocrResult) {
+        mutableStateOf(frames.takeIf { it.size > 1 }?.maxByOrNull { it.size }?.index)
+    }
+    val copyFrameText = remember(frames, selectedFrame, frameText) {
+        frames.firstOrNull { it.index == selectedFrame }?.let(frameText).orEmpty()
+    }
     val copiedMessage = stringResource(R.string.copied)
     val savedMessage = stringResource(R.string.saved_to_gallery)
 
@@ -254,6 +268,9 @@ fun ScreenshotEditorScreen(
                 bitmap != null -> ImageCanvasWithOcrOverlay(
                     bitmap = bitmap,
                     ocrResult = state.ocrResult,
+                    frames = frames,
+                    selectedFrame = selectedFrame,
+                    onFrameSelected = { if (frames.size > 1) selectedFrame = it },
                     overlaysEnabled = state.overlaysEnabled,
                     transform = transform,
                     viewportSize = viewportSize,
@@ -292,10 +309,12 @@ fun ScreenshotEditorScreen(
                 activeTool = activeTool,
                 cropState = cropState,
                 canCopyAll = copyAllText.isNotBlank(),
+                canCopyFrame = copyFrameText.isNotBlank(),
                 onCopyAll = {
                     copyText(copyAllText)
                     onCopyAll()
                 },
+                onCopyFrame = { copyText(copyFrameText) },
                 onCrop = ::startCrop,
                 onRotateLeft = { rotateAnimated(-1f, onRotateLeft) },
                 onRotateRight = { rotateAnimated(1f, onRotateRight) },
@@ -359,6 +378,7 @@ fun ScreenshotEditorScreen(
                 copyText(copyAllText)
                 onCopyAll()
             },
+            onCopyFrame = { copyText(copyFrameText) }.takeIf { copyFrameText.isNotBlank() },
             onRerunOcr = onRerunOcr,
             onDismiss = { showOcrSheet = false },
         )
@@ -396,7 +416,9 @@ private fun EditorFloatingControls(
     activeTool: EditorTool,
     cropState: CropState?,
     canCopyAll: Boolean,
+    canCopyFrame: Boolean,
     onCopyAll: () -> Unit,
+    onCopyFrame: () -> Unit,
     onCrop: () -> Unit,
     onRotateLeft: () -> Unit,
     onRotateRight: () -> Unit,
@@ -434,12 +456,23 @@ private fun EditorFloatingControls(
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
-            Button(onClick = onCopyAll) {
-                Icon(Icons.Outlined.ContentCopy, contentDescription = null)
-                Text(
-                    text = stringResource(R.string.copy_all),
-                    modifier = Modifier.padding(start = 8.dp),
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(onClick = onCopyAll) {
+                    Icon(Icons.Outlined.ContentCopy, contentDescription = null)
+                    Text(
+                        text = stringResource(R.string.copy_all),
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+                if (canCopyFrame) {
+                    FilledTonalButton(onClick = onCopyFrame) {
+                        Icon(Icons.Outlined.SelectAll, contentDescription = null)
+                        Text(
+                            text = stringResource(R.string.copy_frame),
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
             }
         }
 

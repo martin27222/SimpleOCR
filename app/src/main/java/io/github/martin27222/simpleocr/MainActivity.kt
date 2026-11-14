@@ -97,6 +97,7 @@ class MainActivity : ComponentActivity() {
                         copyAllText = remember(state.ocrResult, settings) {
                             state.ocrResult?.textToCopy(settings).orEmpty()
                         },
+                        frameText = { frame -> frame.textToCopy(settings) },
                         onShowSettings = { showSettings = true },
                         onOpenPicker = { imagePicker.launch("image/*") },
                         onToggleOverlays = viewModel::toggleOverlays,
@@ -125,13 +126,14 @@ class MainActivity : ComponentActivity() {
                         multiPhotoCount = state.multiPhotoCount,
                         isMergingPhotos = state.isMergingPhotos,
                         lightOnAtStart = settings.lightOnAtStart,
-                        qualityByDefault = settings.qualityCapture,
+                        defaultQuality = settings.quality,
+                        levelOf = settings::level,
                         onModeSelected = viewModel::setCaptureMode,
-                        onPhotoCaptured = { photo ->
+                        onPhotoCaptured = { photo, level ->
                             if (state.captureMode == CaptureMode.MultiPhoto) {
-                                viewModel.addMultiPhoto(photo)
+                                viewModel.addMultiPhoto(photo, level.passes)
                             } else {
-                                viewModel.openCapturedPhoto(photo)
+                                viewModel.openCapturedPhoto(photo, level.passes)
                             }
                         },
                         onMultiPhotoDone = viewModel::finishMultiPhoto,

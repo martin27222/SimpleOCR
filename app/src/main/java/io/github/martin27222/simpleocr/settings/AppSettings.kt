@@ -17,9 +17,13 @@ data class AppSettings(
     val autoSavePhotos: Boolean = false,
     /** Switch the light on when the camera opens. */
     val lightOnAtStart: Boolean = false,
-    /** Start the camera in quality mode instead of speed mode. */
-    val qualityCapture: Boolean = false,
-)
+    /** The quality level the camera starts with. */
+    val quality: Quality = Quality.Standard,
+    /** What each quality level does. */
+    val levels: Map<Quality, QualityLevel> = Quality.entries.associateWith { it.defaults },
+) {
+    fun level(quality: Quality): QualityLevel = levels[quality] ?: quality.defaults
+}
 
 /** Keeps the settings in a private preferences file on the device. */
 class SettingsStore(context: Context) {
@@ -34,7 +38,13 @@ class SettingsStore(context: Context) {
             autoCopy = preferences.getBoolean(AUTO_COPY, defaults.autoCopy),
             autoSavePhotos = preferences.getBoolean(AUTO_SAVE, defaults.autoSavePhotos),
             lightOnAtStart = preferences.getBoolean(LIGHT_ON, defaults.lightOnAtStart),
-            qualityCapture = preferences.getBoolean(QUALITY_CAPTURE, defaults.qualityCapture),
+            quality = loadQuality(defaults.quality),
+            levels = Quality.entries.associateWith { quality ->
+                QualityLevel(
+                    maxSide = preferences.getInt(sideKey(quality), quality.defaults.maxSide),
+                    passes = preferences.getInt(passesKey(quality), quality.defaults.passes),
+                )
+            },
         )
     }
 
@@ -46,9 +56,24 @@ class SettingsStore(context: Context) {
             putBoolean(AUTO_COPY, settings.autoCopy)
             putBoolean(AUTO_SAVE, settings.autoSavePhotos)
             putBoolean(LIGHT_ON, settings.lightOnAtStart)
-            putBoolean(QUALITY_CAPTURE, settings.qualityCapture)
+            putString(QUALITY, settings.quality.name)
+            for (quality in Quality.entries) {
+                putInt(sideKey(quality), settings.level(quality).maxSide)
+                putInt(passesKey(quality), settings.level(quality).passes)
+            }
         }
     }
+
+    private fun loadQuality(default: Quality): Quality {
+        val stored = preferences.getString(QUALITY, null)
+        Quality.entries.firstOrNull { it.name == stored }?.let { return it }
+        // Before there were three levels, a switch chose between speed and quality.
+        return if (preferences.getBoolean(OLD_QUALITY_CAPTURE, false)) Quality.High else default
+    }
+
+    private fun sideKey(quality: Quality) = "quality_${quality.name}_side"
+
+    private fun passesKey(quality: Quality) = "quality_${quality.name}_passes"
 
     private companion object {
         const val AUTO_DEWARP = "auto_dewarp"
@@ -57,6 +82,7 @@ class SettingsStore(context: Context) {
         const val AUTO_COPY = "auto_copy"
         const val AUTO_SAVE = "auto_save_photos"
         const val LIGHT_ON = "light_on_at_start"
-        const val QUALITY_CAPTURE = "quality_capture"
+        const val QUALITY = "quality"
+        const val OLD_QUALITY_CAPTURE = "quality_capture"
     }
 }

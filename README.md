@@ -36,7 +36,7 @@ ML Kit is not open source. The SimpleOCR code is Apache 2.0, the ML Kit library 
 
 ## Flattening curved pages
 
-A photo of an open book has bent, tilted text lines, and letters on the far side of the page are squeezed. SimpleOCR first reads the photo as taken, so text shows up at once. It then flattens the photo in two ways, reads both results and switches to the best one only if it reads clearly better than the photo as taken. A button swaps between the photo and its flattened version.
+A photo of an open book has bent, tilted text lines, and letters on the far side of the page are squeezed. SimpleOCR first reads the photo as taken, so text shows up at once. It then flattens the photo in up to two ways, reads the results and switches to the best one only if it reads clearly better than the photo as taken. A button swaps between the photo and its flattened version. How many of these reading passes run is set by the quality level, see below.
 
 | Method | How it works |
 | --- | --- |
@@ -46,6 +46,12 @@ A photo of an open book has bent, tilted text lines, and letters on the far side
 Finally the readings correct each other word by word: where they disagree, the spelling most of them share wins, otherwise the word the recognizer was surest about.
 
 The network runs on the device through [ONNX Runtime](https://github.com/microsoft/onnxruntime) (MIT License). The model file was converted from the original UVDoc checkpoint for this project; [third_party/uvdoc](third_party/uvdoc/README.md) documents where it comes from and how to rebuild it.
+
+## Columns and frames
+
+A page often holds more than one area of text: a heading, a side column with ingredients, the main text, a page number. SimpleOCR works out these areas from the positions of the recognized lines (`PageLayout` in the `core` module): a tall empty strip that no line crosses separates two columns, a wide empty band between lines starts a new paragraph. Each area is drawn as one box on the photo, and its lines are never mixed with those of the area next to it.
+
+"Copy all" copies every area, one after the other. "Copy frame" copies a single one. It starts with the largest area, usually the main text; a tap on another box chooses that one.
 
 ## Several photos of a round object
 
@@ -67,9 +73,25 @@ The app works without touching any setting.
 | Copy text automatically after a photo | off |
 | Save every photo to the gallery | off |
 | Light on at start | off |
-| Start in quality mode | off |
+| Quality level at start | SQ |
 
-The camera has two capture modes, switched with the symbol at its top left: speed (the photo is there at once) and quality (the camera takes more care and the photo keeps its full size, which helps with small print).
+### Quality levels
+
+The button at the top left of the camera switches between three levels. Each level has a photo size and a number of reading passes, and both can be changed in the settings.
+
+| Level | Photo size (longer side) | Reading passes |
+| --- | --- | --- |
+| LQ | 2000 px | 2 |
+| SQ | 3000 px | 2 |
+| HQ | 3000 px | 3 |
+
+| Pass | What is read |
+| --- | --- |
+| 1 | the photo as taken; its text shows at once |
+| 2 | the photo flattened with the help of the text from pass 1 |
+| 3 | the photo flattened by the UVDoc network |
+
+A smaller photo is read faster; a larger one helps with small print. At 4096 px, the largest size, a 12 megapixel photo keeps its full size and the camera takes more time for a cleaner photo. Photos are read one after the other, so several photos taken quickly do not fill the memory.
 
 ## Install a development build
 
