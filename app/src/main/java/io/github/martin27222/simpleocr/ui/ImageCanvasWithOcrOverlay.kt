@@ -70,7 +70,9 @@ fun ImageCanvasWithOcrOverlay(
     ocrResult: OcrResult?,
     /** The frames of [ocrResult]; one box is drawn around each. */
     frames: List<OcrFrame>,
-    /** The frame that "Copy frame" copies, drawn more strongly; null draws all boxes alike. */
+    /** The main text, always drawn in amber; null if the page has a single frame. */
+    mainFrame: Int?,
+    /** The frame that "Copy frame" copies; another frame than the main one is drawn in white. */
     selectedFrame: Int?,
     onFrameSelected: (Int) -> Unit,
     overlaysEnabled: Boolean,
@@ -196,7 +198,12 @@ fun ImageCanvasWithOcrOverlay(
                         viewportSize = viewportSize,
                         transform = transform,
                     )
-                    drawRoundedOverlay(rect, selected = frame.index == selectedFrame)
+                    val look = when (frame.index) {
+                        mainFrame -> FrameLook.Main
+                        selectedFrame -> FrameLook.Chosen
+                        else -> FrameLook.Plain
+                    }
+                    drawRoundedOverlay(rect, look)
                 }
             }
 
@@ -707,22 +714,24 @@ private fun RectF2.moveInside(imageSize: SizeF2): RectF2 {
     return RectF2(left, top, left + width, top + height)
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRoundedOverlay(rect: RectF2, selected: Boolean) {
+/** How a frame's box is drawn: the main text in amber, a frame chosen by a tap in white. */
+private enum class FrameLook(val fill: Color, val stroke: Color, val width: Float) {
+    Main(Color(0x4DF59E0B), Color(0xFFF59E0B), 5f),
+    Chosen(Color(0x40FFFFFF), Color(0xFFFFFFFF), 6f),
+    Plain(Color(0x3332C7B7), Color(0xCC14B8A6), 2f),
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRoundedOverlay(rect: RectF2, look: FrameLook) {
     val topLeft = Offset(rect.left, rect.top)
     val size = Size(rect.width, rect.height)
     val radius = CornerRadius(8f, 8f)
+    drawRoundRect(color = look.fill, topLeft = topLeft, size = size, cornerRadius = radius)
     drawRoundRect(
-        color = if (selected) Color(0x4DF59E0B) else Color(0x3332C7B7),
+        color = look.stroke,
         topLeft = topLeft,
         size = size,
         cornerRadius = radius,
-    )
-    drawRoundRect(
-        color = if (selected) Color(0xFFF59E0B) else Color(0xCC14B8A6),
-        topLeft = topLeft,
-        size = size,
-        cornerRadius = radius,
-        style = Stroke(width = if (selected) 5f else 2f),
+        style = Stroke(width = look.width),
     )
 }
 

@@ -27,6 +27,8 @@
 - Several photos are now laid over each other by the positions of their words instead of being joined by their text. Repeated words at the joins are no longer doubled or dropped, scraps of cut-off words are removed, and the joined text keeps its paragraphs and areas.
 - Releases are signed with a private release key instead of the public debug key. The package name is `io.github.martin27222.simpleocr`; it installs next to the old debug app, which can then be removed.
 - App icon in black on white, a little smaller.
+- The main text keeps its amber box; a tapped side box turns white and "Copy frame" copies it.
+- The text joined from several photos shows each area of text as a card with its own copy button, next to "Copy all".
 - Paragraphs are measured inside each area of text with its own line spacing, so a side note in smaller type keeps its lines together.
 
 ## EasyOCR history

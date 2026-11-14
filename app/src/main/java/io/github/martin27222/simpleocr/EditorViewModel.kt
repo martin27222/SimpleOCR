@@ -180,9 +180,9 @@ class EditorViewModel(
             }
             // The photos were discarded while this was running.
             if (session !== multiPhotoSession) return@launch
-            _uiState.update { it.copy(isMergingPhotos = false, mergedParagraphs = merged) }
+            _uiState.update { it.copy(isMergingPhotos = false, mergedFrames = merged) }
             val settings = _settings.value
-            if (settings.autoCopy) copyToClipboard(mergedText(merged, settings))
+            if (settings.autoCopy) copyToClipboard(merged.joinToString("\n\n") { mergedText(it, settings) })
         }
     }
 
@@ -190,10 +190,10 @@ class EditorViewModel(
      * Lays the photos over each other by the places of their words. If a photo shares too few
      * words with the others for that, the texts are joined line by line instead.
      */
-    private fun mergePhotos(readings: List<PhotoReading>): List<List<String>> {
+    private fun mergePhotos(readings: List<PhotoReading>): List<List<List<String>>> {
         if (readings.isEmpty()) return emptyList()
-        PageMerge.merge(readings.map { it.words })?.let { return PageMerge.paragraphs(it) }
-        return listOf(TextMerge.merge(readings.map { it.lines }).map(ReadLine::text))
+        PageMerge.merge(readings.map { it.words })?.let { return PageMerge.frames(it) }
+        return listOf(listOf(TextMerge.merge(readings.map { it.lines }).map(ReadLine::text)))
     }
 
     /** Discards the photos taken so far and their text. */
@@ -201,7 +201,7 @@ class EditorViewModel(
         multiPhotoSession.jobs.forEach(Job::cancel)
         multiPhotoSession = MultiPhotoSession()
         _uiState.update {
-            it.copy(multiPhotoCount = 0, isMergingPhotos = false, mergedParagraphs = null)
+            it.copy(multiPhotoCount = 0, isMergingPhotos = false, mergedFrames = null)
         }
     }
 
@@ -493,7 +493,7 @@ class EditorViewModel(
     }
 
     companion object {
-        /** The joined text of several photos, formatted like "Copy all". */
+        /** The joined text of one area of several photos, formatted like "Copy all". */
         fun mergedText(paragraphs: List<List<String>>, settings: AppSettings): String = TextFormatter.format(
             paragraphs = paragraphs,
             flowingText = settings.flowingText,
