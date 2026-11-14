@@ -20,7 +20,7 @@ data class AppSettings(
     /** Keep the camera in portrait instead of following how the phone is held. */
     val lockOrientation: Boolean = false,
     /** The quality level the camera starts with. */
-    val quality: Quality = Quality.Standard,
+    val quality: Quality = Quality.High,
     /** What each quality level does. */
     val levels: Map<Quality, QualityLevel> = Quality.entries.associateWith { it.defaults },
 ) {

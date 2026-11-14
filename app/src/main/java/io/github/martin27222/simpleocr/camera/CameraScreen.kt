@@ -45,7 +45,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FlashlightOff
 import androidx.compose.material.icons.outlined.FlashlightOn
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Panorama
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.RestartAlt
@@ -240,7 +239,9 @@ private fun CameraContent(
         val activity = context.findActivity()
         val before = activity?.requestedOrientation
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        onDispose { if (before != null) activity.requestedOrientation = before }
+        // While the activity is being rebuilt, the lock must stay: undone, the screen turns back,
+        // the activity is rebuilt again, locks again, and so on until the app is closed.
+        onDispose { if (before != null && !activity.isChangingConfigurations) activity.requestedOrientation = before }
     }
     LaunchedEffect(rotation, imageCapture) { imageCapture.targetRotation = rotation }
     // Turned the short way round, so 270 degrees become -90.
@@ -479,7 +480,7 @@ private fun ModeBar(
             onClick = { onModeSelected(CaptureMode.Photo) },
         )
         ModeTab(
-            icon = Icons.Outlined.Panorama,
+            icon = MultiPhotoIcon,
             label = stringResource(R.string.mode_multi_photo),
             selected = mode == CaptureMode.MultiPhoto,
             symbolModifier = symbolModifier,
