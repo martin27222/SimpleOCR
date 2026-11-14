@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SimpleOCR's own icon: a camera frame around lines of text, one line selected. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M33,43V37a4,4 0,0 1,4 -4H43M65,33H71a4,4 0,0 1,4 4V43M75,65V71a4,4 0,0 1,-4 4H65M43,75H37a4,4 0,0 1,-4 -4V65"
+        android:strokeWidth="4.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M43,45H65M43,63H57"
+        android:strokeWidth="5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M43,54H65"
+        android:strokeWidth="5"
+        android:strokeColor="#FFC94D"
+        android:strokeLineCap="round" />
+</vector>

@@ -49,6 +49,7 @@ class MlKitOcrEngine : OcrEngine {
                         ),
                         confidence = line.confidence,
                         words = line.elements.map { ReadWord(it.text, it.confidence) },
+                        wordBoxes = wordBoxes(line, lineBox),
                         glyphs = glyphs(line),
                     )
                 }.filter { it.text.isNotBlank() },
@@ -94,5 +95,26 @@ class MlKitOcrEngine : OcrEngine {
             position += length + 1
         }
         return glyphs
+    }
+}
+
+/**
+ * The box of every word of a line. A word without a box of its own gets the share of the line
+ * box that its letters take up.
+ */
+private fun wordBoxes(line: Text.Line, lineBox: android.graphics.Rect): List<RectF2> {
+    val elements = line.elements
+    val letters = elements.sumOf { it.text.length }.coerceAtLeast(1)
+    var before = 0
+    return elements.map { element ->
+        val start = lineBox.left + lineBox.width() * before.toFloat() / letters
+        before += element.text.length
+        val box = element.boundingBox
+        if (box != null) {
+            RectF2(box.left.toFloat(), box.top.toFloat(), box.right.toFloat(), box.bottom.toFloat())
+        } else {
+            val end = lineBox.left + lineBox.width() * before.toFloat() / letters
+            RectF2(start, lineBox.top.toFloat(), end, lineBox.bottom.toFloat())
+        }
     }
 }

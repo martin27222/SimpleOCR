@@ -23,6 +23,7 @@ object OcrResultMapper {
                         boundingBox = line.boundingBox,
                         confidence = line.confidence,
                         words = line.words,
+                        wordBoxes = line.wordBoxes,
                         glyphs = line.glyphs,
                     )
                 },
@@ -47,5 +48,7 @@ data class RecognizedTextLine(
     val boundingBox: RectF2,
     val confidence: Float = 1f,
     val words: List<ReadWord> = emptyList(),
+    /** Where each of [words] sits in the image, in the same order. */
+    val wordBoxes: List<RectF2> = emptyList(),
     val glyphs: List<Glyph> = emptyList(),
 )

@@ -12,6 +12,8 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.martin27222.simpleocr.core.dewarp.DewarpChoice
+import io.github.martin27222.simpleocr.core.merge.PageMerge
+import io.github.martin27222.simpleocr.core.merge.PlacedWord
 import io.github.martin27222.simpleocr.core.merge.ReadLine
 import io.github.martin27222.simpleocr.core.merge.TextMerge
 import io.github.martin27222.simpleocr.core.text.TextFormatter
@@ -27,6 +29,7 @@ import io.github.martin27222.simpleocr.ocr.OcrEngine
 import io.github.martin27222.simpleocr.ocr.OcrLanguage
 import io.github.martin27222.simpleocr.ocr.OcrRepository
 import io.github.martin27222.simpleocr.ocr.OcrResult
+import io.github.martin27222.simpleocr.ocr.placedLines
 import io.github.martin27222.simpleocr.ocr.readLines
 import io.github.martin27222.simpleocr.ocr.textToCopy
 import io.github.martin27222.simpleocr.ocr.votedWith
@@ -72,11 +75,14 @@ class EditorViewModel(
 
     /** The photos of one object taken in the mode for several photos, in the order taken. */
     private class MultiPhotoSession {
-        val readings = ArrayList<List<ReadLine>?>()
+        val readings = ArrayList<PhotoReading?>()
         val jobs = ArrayList<Job>()
     }
 
     private var multiPhotoSession = MultiPhotoSession()
+
+    /** The text of one photo of a series, as lines and as words with their places. */
+    private class PhotoReading(val lines: List<ReadLine>, val words: List<List<PlacedWord>>)
 
     /**
      * Lets only one photo be read at a time. Reading holds several full-size images in memory;
@@ -142,7 +148,7 @@ class EditorViewModel(
      * Reads one photo of a series: as taken and, if that reads better, flattened with the help of
      * the first reading. Both readings correct each other word by word.
      */
-    private suspend fun readForMerging(bitmap: Bitmap, language: OcrLanguage, flatten: Boolean): List<ReadLine> {
+    private suspend fun readForMerging(bitmap: Bitmap, language: OcrLanguage, flatten: Boolean): PhotoReading {
         val asTaken = ocrEngine.recognize(bitmap, language)
         val flat = if (flatten) {
             catching {
@@ -152,10 +158,13 @@ class EditorViewModel(
             null
         }
         val useFlat = flat != null && DewarpChoice.preferDewarped(asTaken.qualityScore, flat.ocr.qualityScore)
-        return if (useFlat) {
-            flat.ocr.votedWith(listOf(asTaken)).readLines(flat.bitmap.height)
-        } else {
-            asTaken.votedWith(listOfNotNull(flat?.ocr)).readLines(bitmap.height)
+        return withContext(Dispatchers.Default) {
+            val (reading, height) = if (useFlat) {
+                flat.ocr.votedWith(listOf(asTaken)) to flat.bitmap.height
+            } else {
+                asTaken.votedWith(listOfNotNull(flat?.ocr)) to bitmap.height
+            }
+            PhotoReading(reading.readLines(height), reading.placedLines(height))
         }
     }
 
@@ -167,14 +176,24 @@ class EditorViewModel(
             _uiState.update { it.copy(isMergingPhotos = true) }
             session.jobs.joinAll()
             val merged = withContext(Dispatchers.Default) {
-                TextMerge.merge(session.readings.filterNotNull().filter { it.isNotEmpty() })
-            }.map(ReadLine::text)
+                mergePhotos(session.readings.filterNotNull().filter { it.lines.isNotEmpty() })
+            }
             // The photos were discarded while this was running.
             if (session !== multiPhotoSession) return@launch
-            _uiState.update { it.copy(isMergingPhotos = false, mergedLines = merged) }
+            _uiState.update { it.copy(isMergingPhotos = false, mergedParagraphs = merged) }
             val settings = _settings.value
             if (settings.autoCopy) copyToClipboard(mergedText(merged, settings))
         }
+    }
+
+    /**
+     * Lays the photos over each other by the places of their words. If a photo shares too few
+     * words with the others for that, the texts are joined line by line instead.
+     */
+    private fun mergePhotos(readings: List<PhotoReading>): List<List<String>> {
+        if (readings.isEmpty()) return emptyList()
+        PageMerge.merge(readings.map { it.words })?.let { return PageMerge.paragraphs(it) }
+        return listOf(TextMerge.merge(readings.map { it.lines }).map(ReadLine::text))
     }
 
     /** Discards the photos taken so far and their text. */
@@ -182,7 +201,7 @@ class EditorViewModel(
         multiPhotoSession.jobs.forEach(Job::cancel)
         multiPhotoSession = MultiPhotoSession()
         _uiState.update {
-            it.copy(multiPhotoCount = 0, isMergingPhotos = false, mergedLines = null)
+            it.copy(multiPhotoCount = 0, isMergingPhotos = false, mergedParagraphs = null)
         }
     }
 
@@ -376,9 +395,13 @@ class EditorViewModel(
             dewarpedScore = bestFlat.ocr.qualityScore,
         )
         // Each version is then corrected word by word with what the other versions read.
+        // Comparing every line with every line takes seconds for a full page, so it runs off the
+        // main thread; on the main thread it froze the app ("not responding").
         val readings = listOf(originalOcr) + flattened.map { it.ocr }
-        val votedOriginal = original.copy(ocr = originalOcr.votedWith(readings - originalOcr))
-        val votedFlat = bestFlat?.let { best -> best.copy(ocr = best.ocr.votedWith(readings - best.ocr)) }
+        val (votedOriginal, votedFlat) = withContext(Dispatchers.Default) {
+            original.copy(ocr = originalOcr.votedWith(readings - originalOcr)) to
+                bestFlat?.let { best -> best.copy(ocr = best.ocr.votedWith(readings - best.ocr)) }
+        }
         originalVariant = votedOriginal
         dewarpedVariant = votedFlat
         val shown = if (showDewarped && votedFlat != null) votedFlat else votedOriginal
@@ -470,9 +493,9 @@ class EditorViewModel(
     }
 
     companion object {
-        /** The joined lines of several photos as one paragraph of text. */
-        fun mergedText(lines: List<String>, settings: AppSettings): String = TextFormatter.format(
-            paragraphs = listOf(lines),
+        /** The joined text of several photos, formatted like "Copy all". */
+        fun mergedText(paragraphs: List<List<String>>, settings: AppSettings): String = TextFormatter.format(
+            paragraphs = paragraphs,
             flowingText = settings.flowingText,
             joinHyphenatedWords = settings.joinHyphenatedWords,
         )

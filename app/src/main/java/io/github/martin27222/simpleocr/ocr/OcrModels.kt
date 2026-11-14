@@ -56,6 +56,11 @@ data class OcrTextLine(
     val confidence: Float = 1f,
     /** The words of the line with their own confidence, for comparing several readings. */
     val words: List<ReadWord> = emptyList(),
+    /**
+     * Where each of [words] sits in the image, in the same order, for laying several photos over
+     * each other. Empty if the recognizer gave no word boxes.
+     */
+    val wordBoxes: List<RectF2> = emptyList(),
     /** Where the characters of the line sit in the image, for flattening the page. */
     val glyphs: List<Glyph> = emptyList(),
 )

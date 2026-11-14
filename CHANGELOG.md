@@ -20,6 +20,11 @@
 - Three quality levels (LQ, SQ, HQ) replace the speed and quality modes. Photo size and reading passes of each level can be set.
 - Wider side margins around text that can be selected.
 - Photos are read one after the other to use less memory.
+- New app icon of its own: a camera frame around lines of text.
+- Every build of `main` is a numbered release (0.1.N) with a fixed download link, so Obtainium sees each build as an update.
+- Simpler README with install buttons and an AppVerifier check.
+- Several photos are now laid over each other by the positions of their words instead of being joined by their text. Repeated words at the joins are no longer doubled or dropped, scraps of cut-off words are removed, and the joined text keeps its paragraphs and areas.
+- Releases are signed with a private release key instead of the public debug key. The package name is `io.github.martin27222.simpleocr`; it installs next to the old debug app, which can then be removed.
 
 ## EasyOCR history
 
